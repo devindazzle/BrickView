@@ -9,9 +9,14 @@ namespace BrickView;
 
 public partial class MainWindow : Window
 {
+    private readonly ThumbnailLoader thumbnailLoader;
+
+
     public MainWindow()
     {
         InitializeComponent();
+
+        thumbnailLoader = new ThumbnailLoader();
     }
 
 
@@ -71,86 +76,6 @@ public partial class MainWindow : Window
     }
 
 
-    private async Task LoadThumbnailAsync(IoFileListItem item, IoFileReader reader)
-    {
-        if (item.ThumbnailStatus != ThumbnailStatus.NotLoaded)
-        {
-            return;
-        }
-
-        item.ThumbnailStatus = ThumbnailStatus.Loading;
-
-        ThumbnailReadResult result = await Task.Run(
-            () => reader.ReadThumbnail(item.FilePath));
-
-        switch (result.Status)
-        {
-            case ThumbnailReadStatus.Loaded:
-
-                if (result.Data is null)
-                {
-                    item.ErrorMessage =
-                        "The thumbnail data was empty.";
-
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Error;
-
-                    return;
-                }
-
-                BitmapImage thumbnail =
-                    CreateBitmapImage(result.Data);
-
-                item.Thumbnail =
-                    thumbnail;
-
-                item.ThumbnailStatus =
-                    ThumbnailStatus.Loaded;
-
-                break;
-
-            case ThumbnailReadStatus.Missing:
-
-                item.ThumbnailStatus =
-                    ThumbnailStatus.Missing;
-
-                break;
-
-            case ThumbnailReadStatus.InvalidFile:
-
-                item.ErrorMessage =
-                    result.ErrorMessage
-                    ?? "The .io file is not a valid ZIP archive.";
-
-                item.ThumbnailStatus =
-                    ThumbnailStatus.Error;
-
-                break;
-
-            case ThumbnailReadStatus.Error:
-
-                item.ErrorMessage =
-                    result.ErrorMessage
-                    ?? "An unknown error occurred.";
-
-                item.ThumbnailStatus =
-                    ThumbnailStatus.Error;
-
-                break;
-
-            default:
-
-                item.ErrorMessage =
-                    "Unknown thumbnail status.";
-
-                item.ThumbnailStatus =
-                    ThumbnailStatus.Error;
-
-                break;
-        }
-    }
-
-
     private async void ThumbnailContainer_Loaded(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element)
@@ -163,38 +88,7 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (item.HasError)
-        {
-            return;
-        }
-
-        if (item.ThumbnailStatus != ThumbnailStatus.NotLoaded)
-        {
-            return;
-        }
-
-        IoFileReader reader = new IoFileReader();
-
-        await LoadThumbnailAsync(
-            item,
-            reader);
-    }
-
-
-    private BitmapImage CreateBitmapImage(byte[] imageData)
-    {
-        using (MemoryStream stream = new MemoryStream(imageData))
-        {
-            BitmapImage image = new BitmapImage();
-
-            image.BeginInit();
-            image.CacheOption = BitmapCacheOption.OnLoad;
-            image.StreamSource = stream;
-            image.EndInit();
-            image.Freeze();
-
-            return image;
-        }
+        await thumbnailLoader.LoadAsync(item);
     }
 
 
