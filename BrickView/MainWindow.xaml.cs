@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 
 namespace BrickView;
 
@@ -17,7 +17,11 @@ public partial class MainWindow : Window
 
     private readonly FolderDiffService folderDiffService;
 
+    private readonly IoFolderWatcher folderWatcher;
+
     private string? currentFolder;
+
+    private CancellationTokenSource? folderRefreshCancellation;
 
     public MainWindow()
     {
@@ -28,6 +32,12 @@ public partial class MainWindow : Window
 
         folderDiffService =
             new FolderDiffService();
+
+        folderWatcher =
+            new IoFolderWatcher();
+
+        folderWatcher.FolderChanged +=
+            FolderWatcher_FolderChanged;
 
         FileList.AddHandler(
             VirtualizingWrapPanel.ViewportChangedEvent,
@@ -59,6 +69,8 @@ public partial class MainWindow : Window
         }
 
         currentFolder = folder;
+
+        folderWatcher.Start(folder);
 
         FolderText.Text = folder;
 
@@ -110,6 +122,8 @@ public partial class MainWindow : Window
                 MessageBoxImage.Warning);
 
             currentFolder = null;
+
+            folderWatcher.Stop();
 
             FolderText.Text = string.Empty;
 
@@ -342,6 +356,64 @@ public partial class MainWindow : Window
                     ThumbnailLoadPriority.Preload);
             }
         }
+    }
+
+    private void FolderWatcher_FolderChanged(
+        object? sender,
+        EventArgs e)
+    {
+        Dispatcher.InvokeAsync(
+            ScheduleFolderRefresh);
+    }
+
+    private void ScheduleFolderRefresh()
+    {
+        folderRefreshCancellation?.Cancel();
+
+        folderRefreshCancellation?.Dispose();
+
+        folderRefreshCancellation =
+            new CancellationTokenSource();
+
+        CancellationToken cancellationToken =
+            folderRefreshCancellation.Token;
+
+        _ = DebouncedFolderRefreshAsync(
+            cancellationToken);
+    }
+
+    private async Task DebouncedFolderRefreshAsync(
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            await Task.Delay(
+                TimeSpan.FromMilliseconds(300),
+                cancellationToken);
+
+            if (cancellationToken.IsCancellationRequested)
+            {
+                return;
+            }
+
+            await RefreshCurrentFolderAsync();
+        }
+        catch (OperationCanceledException)
+        {
+            // Expected when a new file system event
+            // resets the debounce timer.
+        }
+    }
+
+    protected override void OnClosed(
+        EventArgs e)
+    {
+        folderRefreshCancellation?.Cancel();
+        folderRefreshCancellation?.Dispose();
+
+        folderWatcher.Dispose();
+
+        base.OnClosed(e);
     }
 
     private void FileList_MouseDoubleClick(
