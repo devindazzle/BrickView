@@ -1,30 +1,39 @@
 ﻿using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 
 namespace BrickView;
 
 public partial class MainWindow : Window
 {
-    
     private readonly ThumbnailLoader thumbnailLoader;
 
-    private string? currentFolder;
+    private readonly FolderDiffService folderDiffService;
 
+    private string? currentFolder;
 
     public MainWindow()
     {
         InitializeComponent();
 
-        thumbnailLoader = new ThumbnailLoader();
+        thumbnailLoader =
+            new ThumbnailLoader();
+
+        folderDiffService =
+            new FolderDiffService();
 
         FileList.AddHandler(
             VirtualizingWrapPanel.ViewportChangedEvent,
-            new RoutedEventHandler(FileList_ViewportChanged));
+            new RoutedEventHandler(
+                FileList_ViewportChanged));
     }
-
 
     private async void SelectFolder_Click(
         object sender,
@@ -37,20 +46,55 @@ public partial class MainWindow : Window
 
         bool? result = dialog.ShowDialog();
 
-        if (result == true)
+        if (result != true)
         {
-            string folder = dialog.FolderName;
-
-            currentFolder = folder;
-
-            FolderText.Text = folder;
-
-            await LoadIoFilesAsync(folder);
+            return;
         }
+
+        string folder = dialog.FolderName;
+
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return;
+        }
+
+        currentFolder = folder;
+
+        FolderText.Text = folder;
+
+        await LoadIoFilesAsync(folder);
     }
 
+    private async void RefreshView_Click(
+        object sender,
+        RoutedEventArgs e)
+    {
+        await RefreshCurrentFolderAsync();
+    }
 
-    private async void RefreshView_Click(object sender, RoutedEventArgs e)
+    private async Task LoadIoFilesAsync(
+        string folder)
+    {
+        FileList.Items.Clear();
+
+        string[] files = Directory.GetFiles(
+            folder,
+            "*.io",
+            SearchOption.TopDirectoryOnly)
+            .OrderBy(
+                file => Path.GetFileName(file),
+                StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+
+        foreach (string file in files)
+        {
+            AddFileListItem(file);
+        }
+
+        await Task.CompletedTask;
+    }
+
+    private async Task RefreshCurrentFolderAsync()
     {
         if (string.IsNullOrWhiteSpace(currentFolder))
         {
@@ -66,21 +110,14 @@ public partial class MainWindow : Window
                 MessageBoxImage.Warning);
 
             currentFolder = null;
+
             FolderText.Text = string.Empty;
 
             return;
         }
 
-        await LoadIoFilesAsync(currentFolder);
-    }
-
-
-    private async Task LoadIoFilesAsync(string folder)
-    {
-        FileList.Items.Clear();
-
-        string[] files = Directory.GetFiles(
-            folder,
+        string[] currentFiles = Directory.GetFiles(
+            currentFolder,
             "*.io",
             SearchOption.TopDirectoryOnly)
             .OrderBy(
@@ -88,57 +125,152 @@ public partial class MainWindow : Window
                 StringComparer.OrdinalIgnoreCase)
             .ToArray();
 
-        IoFileReader reader = new IoFileReader();
+        List<IoFileListItem> existingItems =
+            FileList.Items
+                .OfType<IoFileListItem>()
+                .ToList();
 
-        List<IoFileListItem> items = new List<IoFileListItem>();
+        FolderDiff diff =
+            folderDiffService.Compare(
+                existingItems,
+                currentFiles);
 
-        foreach (string file in files)
+        foreach (FileChange change in diff.Changes)
         {
-            string fileName = Path.GetFileNameWithoutExtension(file);
+            switch (change.ChangeType)
+            {
+                case FileChangeType.Added:
 
-            IoFileListItem item = new IoFileListItem(
-                fileName,
-                file,
-                null,
-                null);
+                    AddFileListItem(
+                        change.FilePath);
 
-            items.Add(item);
+                    break;
 
-            FileList.Items.Add(item);
+                case FileChangeType.Removed:
+
+                    RemoveFileListItem(
+                        change.FilePath);
+
+                    break;
+
+                case FileChangeType.Modified:
+
+                    UpdateModifiedFile(
+                        change.FilePath);
+
+                    break;
+
+                case FileChangeType.Unchanged:
+
+                    break;
+            }
         }
+
+        SortFileList();
+
+        await Task.CompletedTask;
     }
 
-
-    private void FileList_MouseDoubleClick(
-        object sender,
-        MouseButtonEventArgs e)
+    private void AddFileListItem(
+        string filePath)
     {
-        if (FileList.SelectedItem is not IoFileListItem item)
+        if (!File.Exists(filePath))
         {
             return;
         }
 
-        try
+        FileInfo fileInfo =
+            new FileInfo(filePath);
+
+        string fileName =
+            Path.GetFileNameWithoutExtension(
+                filePath);
+
+        IoFileListItem item =
+            new IoFileListItem(
+                fileName,
+                filePath,
+                fileInfo.Length,
+                fileInfo.LastWriteTimeUtc,
+                null,
+                null);
+
+        FileList.Items.Add(item);
+    }
+
+    private void RemoveFileListItem(
+        string filePath)
+    {
+        IoFileListItem? item =
+            FileList.Items
+                .OfType<IoFileListItem>()
+                .FirstOrDefault(
+                    existingItem =>
+                        string.Equals(
+                            existingItem.FilePath,
+                            filePath,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (item is not null)
         {
-            Process.Start(
-                new ProcessStartInfo
-                {
-                    FileName = item.FilePath,
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(
-                $"Could not open the file.\n\n{exception.Message}",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
+            FileList.Items.Remove(item);
         }
     }
 
+    private void UpdateModifiedFile(
+        string filePath)
+    {
+        IoFileListItem? item =
+            FileList.Items
+                .OfType<IoFileListItem>()
+                .FirstOrDefault(
+                    existingItem =>
+                        string.Equals(
+                            existingItem.FilePath,
+                            filePath,
+                            StringComparison.OrdinalIgnoreCase));
 
-    private void FileList_ViewportChanged(object sender, RoutedEventArgs e)
+        if (item is null)
+        {
+            return;
+        }
+
+        if (!File.Exists(filePath))
+        {
+            return;
+        }
+
+        FileInfo fileInfo =
+            new FileInfo(filePath);
+
+        item.UpdateFileInfo(
+            fileInfo.Length,
+            fileInfo.LastWriteTimeUtc);
+
+        item.InvalidateThumbnail();
+    }
+
+    private void SortFileList()
+    {
+        List<IoFileListItem> sortedItems =
+            FileList.Items
+                .OfType<IoFileListItem>()
+                .OrderBy(
+                    item => item.FileName,
+                    StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+        FileList.Items.Clear();
+
+        foreach (IoFileListItem item in sortedItems)
+        {
+            FileList.Items.Add(item);
+        }
+    }
+
+    private void FileList_ViewportChanged(
+        object sender,
+        RoutedEventArgs e)
     {
         if (e is not ViewportChangedEventArgs viewportEventArgs)
         {
@@ -181,7 +313,7 @@ public partial class MainWindow : Window
             if (FileList.Items[index]
                 is IoFileListItem item)
             {
-                thumbnailLoader.LoadAsync(
+                _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Visible);
             }
@@ -205,10 +337,39 @@ public partial class MainWindow : Window
             if (FileList.Items[index]
                 is IoFileListItem item)
             {
-                thumbnailLoader.LoadAsync(
+                _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Preload);
             }
+        }
+    }
+
+    private void FileList_MouseDoubleClick(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (FileList.SelectedItem
+            is not IoFileListItem item)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = item.FilePath,
+                    UseShellExecute = true
+                });
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"Could not open the file.\n\n{exception.Message}",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 }

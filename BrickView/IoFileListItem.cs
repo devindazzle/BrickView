@@ -10,6 +10,10 @@ public class IoFileListItem : INotifyPropertyChanged
 
     public string FilePath { get; }
 
+    public long FileSize { get; private set; }
+
+    public DateTime LastWriteTimeUtc { get; private set; }
+
     private BitmapImage? thumbnail;
 
     public BitmapImage? Thumbnail
@@ -133,14 +137,33 @@ public class IoFileListItem : INotifyPropertyChanged
     public IoFileListItem(
         string fileName,
         string filePath,
+        long fileSize,
+        DateTime lastWriteTimeUtc,
         BitmapImage? thumbnail,
         string? errorMessage)
     {
         FileName = fileName;
         FilePath = filePath;
+        FileSize = fileSize;
+        LastWriteTimeUtc = lastWriteTimeUtc;
         this.thumbnail = thumbnail;
         this.errorMessage = errorMessage;
         thumbnailStatus = ThumbnailStatus.NotLoaded;
+    }
+
+    public void UpdateFileInfo(
+        long fileSize,
+        DateTime lastWriteTimeUtc)
+    {
+        FileSize = fileSize;
+        LastWriteTimeUtc = lastWriteTimeUtc;
+    }
+
+    public void InvalidateThumbnail()
+    {
+        Thumbnail = null;
+        ErrorMessage = null;
+        ThumbnailStatus = ThumbnailStatus.NotLoaded;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
