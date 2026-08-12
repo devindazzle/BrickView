@@ -4,114 +4,297 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:local="clr-namespace:BrickView"
     Title="BrickView"
-    Width="1000"
-    Height="700"
+    Width="1100"
+    Height="750"
+    MinWidth="800"
+    MinHeight="550"
+    Background="#202124"
+    Foreground="#F1F3F4"
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
 
-    <Grid Margin="20">
+    <Window.Resources>
+
+        <!--  Application colours  -->
+
+        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#202124" />
+
+        <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#292A2D" />
+
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#2B2D30" />
+
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#44474B" />
+
+        <SolidColorBrush x:Key="CardHoverBrush" Color="#34373B" />
+
+        <SolidColorBrush x:Key="CardSelectedBrush" Color="#394D5F" />
+
+        <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#18191B" />
+
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F1F3F4" />
+
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#A8ABB0" />
+
+        <SolidColorBrush x:Key="ErrorTextBrush" Color="#FF7B7B" />
+
+        <SolidColorBrush x:Key="AccentBrush" Color="#4EA3FF" />
+
+        <!--  Button style  -->
+
+        <Style x:Key="ToolbarButtonStyle" TargetType="Button">
+
+            <Setter Property="Background" Value="#34363A" />
+
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+
+            <Setter Property="BorderBrush" Value="#4A4D52" />
+
+            <Setter Property="BorderThickness" Value="1" />
+
+            <Setter Property="Padding" Value="16,8" />
+
+            <Setter Property="FontSize" Value="13" />
+
+            <Setter Property="FontWeight" Value="SemiBold" />
+
+            <Setter Property="Cursor" Value="Hand" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="Button">
+
+                        <Border
+                            x:Name="ButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#414449" />
+
+                                <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#5D6167" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsPressed" Value="True">
+
+                                <Setter TargetName="ButtonBorder" Property="Background" Value="#2D2F32" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+
+                                <Setter TargetName="ButtonBorder" Property="Opacity" Value="0.5" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+        <!--  ListBoxItem style  -->
+
+        <Style x:Key="MocListBoxItemStyle" TargetType="ListBoxItem">
+
+            <Setter Property="Padding" Value="0" />
+
+            <Setter Property="Margin" Value="0" />
+
+            <Setter Property="Background" Value="Transparent" />
+
+            <Setter Property="BorderThickness" Value="0" />
+
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+
+            <Setter Property="VerticalContentAlignment" Value="Top" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="ListBoxItem">
+
+                        <Border
+                            x:Name="ItemBorder"
+                            Padding="4"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="Transparent"
+                            BorderThickness="1"
+                            CornerRadius="5"
+                            SnapsToDevicePixels="True">
+
+                            <ContentPresenter
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                Content="{TemplateBinding Content}"
+                                ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource CardHoverBrush}" />
+
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#555A60" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsSelected" Value="True">
+
+                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource CardSelectedBrush}" />
+
+                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+    </Window.Resources>
+
+    <Grid Background="{StaticResource WindowBackgroundBrush}">
 
         <Grid.RowDefinitions>
+
+            <RowDefinition Height="58" />
+
             <RowDefinition Height="Auto" />
-            <RowDefinition Height="Auto" />
+
             <RowDefinition Height="*" />
+
         </Grid.RowDefinitions>
 
-        <!--  Buttons  -->
-        <StackPanel Grid.Row="0" Orientation="Horizontal">
+        <!--  Top toolbar  -->
 
-            <Button
-                x:Name="SelectFolderButton"
-                Width="120"
-                Height="35"
-                Click="SelectFolder_Click"
-                Content="Select folder" />
+        <Border
+            Grid.Row="0"
+            Background="{StaticResource ToolbarBackgroundBrush}"
+            BorderBrush="#37393D"
+            BorderThickness="0,0,0,1">
 
-            <Button
-                x:Name="RefreshViewButton"
-                Width="120"
-                Height="35"
-                Margin="10,0,0,0"
-                Click="RefreshView_Click"
-                Content="Refresh View" />
+            <Grid Margin="16,0">
 
-        </StackPanel>
+                <Grid.ColumnDefinitions>
 
-        <!--  Selected folder  -->
-        <TextBlock
-            x:Name="FolderText"
+                    <ColumnDefinition Width="Auto" />
+
+                    <ColumnDefinition Width="*" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                </Grid.ColumnDefinitions>
+
+                <!--  Application name  -->
+
+                <TextBlock
+                    Grid.Column="0"
+                    VerticalAlignment="Center"
+                    FontSize="20"
+                    FontWeight="Bold"
+                    Foreground="{StaticResource PrimaryTextBrush}"
+                    Text="BrickView" />
+
+                <!--  Current folder  -->
+
+                <TextBlock
+                    Grid.Column="1"
+                    Margin="24,0"
+                    VerticalAlignment="Center"
+                    FontSize="13"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    Text="{Binding ElementName=FolderText, Path=Text}"
+                    TextTrimming="CharacterEllipsis" />
+
+                <!--  Toolbar buttons  -->
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal">
+
+                    <Button
+                        x:Name="SelectFolderButton"
+                        Height="34"
+                        Margin="0,0,8,0"
+                        Click="SelectFolder_Click"
+                        Content="Select folder"
+                        Style="{StaticResource ToolbarButtonStyle}" />
+
+                    <Button
+                        x:Name="RefreshViewButton"
+                        Height="34"
+                        Click="RefreshView_Click"
+                        Content="↻  Refresh"
+                        Style="{StaticResource ToolbarButtonStyle}" />
+
+                </StackPanel>
+
+            </Grid>
+
+        </Border>
+
+        <!--  Folder information  -->
+
+        <Border
             Grid.Row="1"
-            Margin="0,15,0,15"
-            FontSize="14" />
+            Padding="16,10"
+            Background="#242629"
+            BorderBrush="#34363A"
+            BorderThickness="0,0,0,1">
+
+            <TextBlock
+                x:Name="FolderText"
+                FontSize="12"
+                Foreground="{StaticResource SecondaryTextBrush}"
+                TextTrimming="CharacterEllipsis"
+                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
+
+        </Border>
 
         <!--  MOC thumbnail grid  -->
+
         <ListBox
             x:Name="FileList"
             Grid.Row="2"
             HorizontalContentAlignment="Stretch"
+            Background="Transparent"
+            BorderThickness="0"
+            ItemContainerStyle="{StaticResource MocListBoxItemStyle}"
             MouseDoubleClick="FileList_MouseDoubleClick"
             ScrollViewer.CanContentScroll="True"
             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
             ScrollViewer.VerticalScrollBarVisibility="Auto">
 
-            <!--  ListBox item container  -->
-            <ListBox.ItemContainerStyle>
-
-                <Style TargetType="ListBoxItem">
-
-                    <Setter Property="Padding" Value="0" />
-
-                    <Setter Property="Margin" Value="0" />
-
-                    <Setter Property="Background" Value="Transparent" />
-
-                    <Setter Property="BorderThickness" Value="0" />
-
-                    <Setter Property="HorizontalContentAlignment" Value="Left" />
-
-                    <Setter Property="VerticalContentAlignment" Value="Top" />
-
-                    <Setter Property="Template">
-
-                        <Setter.Value>
-
-                            <ControlTemplate TargetType="ListBoxItem">
-
-                                <Border
-                                    Padding="{TemplateBinding Padding}"
-                                    Background="{TemplateBinding Background}"
-                                    SnapsToDevicePixels="True">
-
-                                    <ContentPresenter
-                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
-                                        Content="{TemplateBinding Content}"
-                                        ContentStringFormat="{TemplateBinding ContentStringFormat}"
-                                        ContentTemplate="{TemplateBinding ContentTemplate}" />
-
-                                </Border>
-
-                                <ControlTemplate.Triggers>
-
-                                    <Trigger Property="IsSelected" Value="True">
-
-                                        <Setter Property="Background" Value="#D9EDF7" />
-
-                                    </Trigger>
-
-                                </ControlTemplate.Triggers>
-
-                            </ControlTemplate>
-
-                        </Setter.Value>
-
-                    </Setter>
-
-                </Style>
-
-            </ListBox.ItemContainerStyle>
-
             <!--  Virtualized grid  -->
+
             <ListBox.ItemsPanel>
 
                 <ItemsPanelTemplate>
@@ -122,7 +305,8 @@
 
             </ListBox.ItemsPanel>
 
-            <!--  Item template  -->
+            <!--  MOC card  -->
+
             <ListBox.ItemTemplate>
 
                 <DataTemplate>
@@ -132,16 +316,20 @@
                         Height="270"
                         Margin="10">
 
-                        <!--  Thumbnail area  -->
+                        <!--  Thumbnail  -->
+
                         <Border
                             Width="180"
                             Height="180"
-                            BorderBrush="LightGray"
-                            BorderThickness="1">
+                            Background="{StaticResource ThumbnailBackgroundBrush}"
+                            BorderBrush="{StaticResource CardBorderBrush}"
+                            BorderThickness="1"
+                            SnapsToDevicePixels="True">
 
                             <Grid>
 
-                                <!--  Actual thumbnail  -->
+                                <!--  Thumbnail image  -->
+
                                 <Image
                                     Margin="5"
                                     Source="{Binding Thumbnail}"
@@ -170,10 +358,11 @@
                                 </Image>
 
                                 <!--  Loading  -->
+
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Foreground="Gray"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="Loading...">
 
                                     <TextBlock.Style>
@@ -199,10 +388,11 @@
                                 </TextBlock>
 
                                 <!--  Not loaded  -->
+
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Foreground="Gray"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="Not loaded">
 
                                     <TextBlock.Style>
@@ -228,10 +418,11 @@
                                 </TextBlock>
 
                                 <!--  No thumbnail  -->
+
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
-                                    Foreground="Gray"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="No thumbnail">
 
                                     <TextBlock.Style>
@@ -257,11 +448,12 @@
                                 </TextBlock>
 
                                 <!--  Invalid file  -->
+
                                 <TextBlock
                                     HorizontalAlignment="Center"
                                     VerticalAlignment="Center"
                                     FontWeight="Bold"
-                                    Foreground="DarkRed"
+                                    Foreground="{StaticResource ErrorTextBrush}"
                                     Text="⚠ Invalid file">
 
                                     <TextBlock.Style>
@@ -291,16 +483,22 @@
                         </Border>
 
                         <!--  File name  -->
+
                         <TextBlock
-                            Margin="0,5,0,0"
-                            FontWeight="Bold"
+                            Margin="2,8,2,0"
+                            FontSize="13"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
                             Text="{Binding FileName}"
-                            TextWrapping="Wrap"
+                            TextTrimming="CharacterEllipsis"
                             ToolTip="{Binding FilePath}" />
 
                         <!--  Error message  -->
+
                         <TextBlock
-                            Foreground="DarkRed"
+                            Margin="2,3,2,0"
+                            FontSize="11"
+                            Foreground="{StaticResource ErrorTextBrush}"
                             Text="{Binding ErrorMessage}"
                             TextWrapping="Wrap" />
 
