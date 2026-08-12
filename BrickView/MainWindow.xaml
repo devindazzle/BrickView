@@ -59,7 +59,8 @@
                     <StackPanel
                         Width="180"
                         Height="270"
-                        Margin="10">
+                        Margin="10"
+                        Loaded="ThumbnailContainer_Loaded">
 
                         <!--  Thumbnail area  -->
                         <Border

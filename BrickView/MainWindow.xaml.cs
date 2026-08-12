@@ -68,30 +68,6 @@ public partial class MainWindow : Window
 
             FileList.Items.Add(item);
         }
-
-        await LoadThumbnailsAsync(items, reader);
-    }
-
-
-    private async Task LoadThumbnailsAsync(IEnumerable<IoFileListItem> items, IoFileReader reader)
-    {
-        List<Task> tasks = new List<Task>();
-
-        foreach (IoFileListItem item in items)
-        {
-            if (item.HasError)
-            {
-                continue;
-            }
-
-            Task task = LoadThumbnailAsync(
-                item,
-                reader);
-
-            tasks.Add(task);
-        }
-
-        await Task.WhenAll(tasks);
     }
 
 
@@ -122,10 +98,12 @@ public partial class MainWindow : Window
                     return;
                 }
 
-                BitmapImage thumbnail = CreateBitmapImage(
-                    result.Data);
+                BitmapImage thumbnail =
+                    CreateBitmapImage(result.Data);
 
-                item.Thumbnail = thumbnail;
+                item.Thumbnail =
+                    thumbnail;
+
                 item.ThumbnailStatus =
                     ThumbnailStatus.Loaded;
 
@@ -170,6 +148,36 @@ public partial class MainWindow : Window
 
                 break;
         }
+    }
+
+
+    private async void ThumbnailContainer_Loaded(object sender, RoutedEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+        {
+            return;
+        }
+
+        if (element.DataContext is not IoFileListItem item)
+        {
+            return;
+        }
+
+        if (item.HasError)
+        {
+            return;
+        }
+
+        if (item.ThumbnailStatus != ThumbnailStatus.NotLoaded)
+        {
+            return;
+        }
+
+        IoFileReader reader = new IoFileReader();
+
+        await LoadThumbnailAsync(
+            item,
+            reader);
     }
 
 
