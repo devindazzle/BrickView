@@ -14,6 +14,7 @@ public partial class MainWindow : Window
         InitializeComponent();
     }
 
+
     private async void SelectFolder_Click(
         object sender,
         RoutedEventArgs e)
@@ -34,6 +35,7 @@ public partial class MainWindow : Window
             await LoadIoFilesAsync(folder);
         }
     }
+
 
     private async Task LoadIoFilesAsync(string folder)
     {
@@ -70,9 +72,8 @@ public partial class MainWindow : Window
         await LoadThumbnailsAsync(items, reader);
     }
 
-    private async Task LoadThumbnailsAsync(
-        IEnumerable<IoFileListItem> items,
-        IoFileReader reader)
+
+    private async Task LoadThumbnailsAsync(IEnumerable<IoFileListItem> items, IoFileReader reader)
     {
         List<Task> tasks = new List<Task>();
 
@@ -93,30 +94,84 @@ public partial class MainWindow : Window
         await Task.WhenAll(tasks);
     }
 
-    private async Task LoadThumbnailAsync(
-        IoFileListItem item,
-        IoFileReader reader)
+
+    private async Task LoadThumbnailAsync(IoFileListItem item, IoFileReader reader)
     {
-        try
+        if (item.ThumbnailStatus != ThumbnailStatus.NotLoaded)
         {
-            byte[]? thumbnailData = await Task.Run(
-                () => reader.ReadThumbnail(item.FilePath));
-
-            if (thumbnailData is null)
-            {
-                return;
-            }
-
-            BitmapImage thumbnail = CreateBitmapImage(
-                thumbnailData);
-
-            item.Thumbnail = thumbnail;
+            return;
         }
-        catch (Exception exception)
+
+        item.ThumbnailStatus = ThumbnailStatus.Loading;
+
+        ThumbnailReadResult result = await Task.Run(
+            () => reader.ReadThumbnail(item.FilePath));
+
+        switch (result.Status)
         {
-            item.ErrorMessage = exception.Message;
+            case ThumbnailReadStatus.Loaded:
+
+                if (result.Data is null)
+                {
+                    item.ErrorMessage =
+                        "The thumbnail data was empty.";
+
+                    item.ThumbnailStatus =
+                        ThumbnailStatus.Error;
+
+                    return;
+                }
+
+                BitmapImage thumbnail = CreateBitmapImage(
+                    result.Data);
+
+                item.Thumbnail = thumbnail;
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Loaded;
+
+                break;
+
+            case ThumbnailReadStatus.Missing:
+
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Missing;
+
+                break;
+
+            case ThumbnailReadStatus.InvalidFile:
+
+                item.ErrorMessage =
+                    result.ErrorMessage
+                    ?? "The .io file is not a valid ZIP archive.";
+
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Error;
+
+                break;
+
+            case ThumbnailReadStatus.Error:
+
+                item.ErrorMessage =
+                    result.ErrorMessage
+                    ?? "An unknown error occurred.";
+
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Error;
+
+                break;
+
+            default:
+
+                item.ErrorMessage =
+                    "Unknown thumbnail status.";
+
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Error;
+
+                break;
         }
     }
+
 
     private BitmapImage CreateBitmapImage(byte[] imageData)
     {
@@ -133,6 +188,7 @@ public partial class MainWindow : Window
             return image;
         }
     }
+
 
     private void FileList_MouseDoubleClick(
         object sender,

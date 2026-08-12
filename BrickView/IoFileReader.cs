@@ -69,30 +69,66 @@ public class IoFileReader
         }
     }
 
-    public byte[]? ReadThumbnail(string filePath)
+    public ThumbnailReadResult ReadThumbnail(string filePath)
     {
-        using (ZipArchive archive = ZipFile.OpenRead(filePath))
+        try
         {
-            foreach (ZipArchiveEntry entry in archive.Entries)
+            using (ZipArchive archive = ZipFile.OpenRead(filePath))
             {
-                string fileName = Path.GetFileName(entry.FullName);
-
-                if (string.Equals(
-                    fileName,
-                    "thumbnail.png",
-                    StringComparison.OrdinalIgnoreCase))
+                foreach (ZipArchiveEntry entry in archive.Entries)
                 {
-                    using (Stream stream = entry.Open())
-                    using (MemoryStream memoryStream = new MemoryStream())
-                    {
-                        stream.CopyTo(memoryStream);
+                    string fileName = Path.GetFileName(entry.FullName);
 
-                        return memoryStream.ToArray();
+                    if (string.Equals(
+                        fileName,
+                        "thumbnail.png",
+                        StringComparison.OrdinalIgnoreCase))
+                    {
+                        using (Stream stream = entry.Open())
+                        using (MemoryStream memoryStream = new MemoryStream())
+                        {
+                            stream.CopyTo(memoryStream);
+
+                            return new ThumbnailReadResult(
+                                ThumbnailReadStatus.Loaded,
+                                memoryStream.ToArray());
+                        }
                     }
                 }
+
+                return new ThumbnailReadResult(
+                    ThumbnailReadStatus.Missing);
             }
         }
-
-        return null;
+        catch (FileNotFoundException)
+        {
+            return new ThumbnailReadResult(
+                ThumbnailReadStatus.Error,
+                errorMessage: "The .io file could not be found.");
+        }
+        catch (DirectoryNotFoundException)
+        {
+            return new ThumbnailReadResult(
+                ThumbnailReadStatus.Error,
+                errorMessage: "The directory containing the .io file could not be found.");
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return new ThumbnailReadResult(
+                ThumbnailReadStatus.Error,
+                errorMessage: "Access to the .io file was denied.");
+        }
+        catch (InvalidDataException)
+        {
+            return new ThumbnailReadResult(
+                ThumbnailReadStatus.InvalidFile,
+                errorMessage: "The .io file is not a valid ZIP archive.");
+        }
+        catch (Exception exception)
+        {
+            return new ThumbnailReadResult(
+                ThumbnailReadStatus.Error,
+                errorMessage: exception.Message);
+        }
     }
 }
