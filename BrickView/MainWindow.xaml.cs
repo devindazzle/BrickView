@@ -76,7 +76,7 @@ public partial class MainWindow : Window
     }
 
 
-    private async void ThumbnailContainer_Loaded(object sender, RoutedEventArgs e)
+    private void ThumbnailContainer_Loaded(object sender, RoutedEventArgs e)
     {
         if (sender is not FrameworkElement element)
         {
@@ -88,7 +88,9 @@ public partial class MainWindow : Window
             return;
         }
 
-        await thumbnailLoader.LoadAsync(item);
+        _ = thumbnailLoader.LoadAsync(
+            item,
+            ThumbnailLoadPriority.Visible);
     }
 
 

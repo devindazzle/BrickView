@@ -5,26 +5,88 @@ namespace BrickView;
 
 public class ThumbnailLoader
 {
-    private const int MaxConcurrentLoads = 4;
+    private const int WorkerCount = 4;
 
-    private readonly SemaphoreSlim semaphore =
-        new SemaphoreSlim(MaxConcurrentLoads);
+    private readonly object queueLock = new();
+
+    private readonly PriorityQueue<
+        ThumbnailLoadRequest,
+        int> queue = new();
+
+    private readonly SemaphoreSlim queueSignal =
+        new SemaphoreSlim(0);
+
+    private readonly List<Task> workers = new();
 
     private readonly IoFileReader reader =
         new IoFileReader();
 
-    public async Task LoadAsync(IoFileListItem item)
+    public ThumbnailLoader()
     {
-        if (item.ThumbnailStatus != ThumbnailStatus.NotLoaded)
+        for (int i = 0; i < WorkerCount; i++)
         {
-            return;
+            workers.Add(
+                Task.Run(WorkerAsync));
+        }
+    }
+
+    public Task LoadAsync(
+        IoFileListItem item,
+        ThumbnailLoadPriority priority)
+    {
+        if (item.ThumbnailStatus !=
+            ThumbnailStatus.NotLoaded)
+        {
+            return Task.CompletedTask;
         }
 
         item.ThumbnailStatus =
             ThumbnailStatus.Loading;
 
-        await semaphore.WaitAsync();
+        ThumbnailLoadRequest request =
+            new ThumbnailLoadRequest(item);
 
+        lock (queueLock)
+        {
+            queue.Enqueue(
+                request,
+                (int)priority);
+        }
+
+        queueSignal.Release();
+
+        return Task.CompletedTask;
+    }
+
+    private async Task WorkerAsync()
+    {
+        while (true)
+        {
+            await queueSignal.WaitAsync();
+
+            ThumbnailLoadRequest? request = null;
+
+            lock (queueLock)
+            {
+                if (queue.Count > 0)
+                {
+                    request = queue.Dequeue();
+                }
+            }
+
+            if (request is null)
+            {
+                continue;
+            }
+
+            await LoadThumbnailAsync(
+                request.Item);
+        }
+    }
+
+    private async Task LoadThumbnailAsync(
+        IoFileListItem item)
+    {
         try
         {
             ThumbnailReadResult result =
@@ -47,9 +109,12 @@ public class ThumbnailLoader
                         return;
                     }
 
-                    item.Thumbnail =
+                    BitmapImage thumbnail =
                         CreateBitmapImage(
                             result.Data);
+
+                    item.Thumbnail =
+                        thumbnail;
 
                     item.ThumbnailStatus =
                         ThumbnailStatus.Loaded;
@@ -84,15 +149,30 @@ public class ThumbnailLoader
                         ThumbnailStatus.Error;
 
                     break;
+
+                default:
+
+                    item.ErrorMessage =
+                        "Unknown thumbnail status.";
+
+                    item.ThumbnailStatus =
+                        ThumbnailStatus.Error;
+
+                    break;
             }
         }
-        finally
+        catch (Exception exception)
         {
-            semaphore.Release();
+            item.ErrorMessage =
+                exception.Message;
+
+            item.ThumbnailStatus =
+                ThumbnailStatus.Error;
         }
     }
 
-    private static BitmapImage CreateBitmapImage(byte[] imageData)
+    private static BitmapImage CreateBitmapImage(
+        byte[] imageData)
     {
         using MemoryStream stream =
             new MemoryStream(imageData);
@@ -101,12 +181,28 @@ public class ThumbnailLoader
             new BitmapImage();
 
         image.BeginInit();
+
         image.CacheOption =
             BitmapCacheOption.OnLoad;
-        image.StreamSource = stream;
+
+        image.StreamSource =
+            stream;
+
         image.EndInit();
+
         image.Freeze();
 
         return image;
+    }
+
+    private sealed class ThumbnailLoadRequest
+    {
+        public IoFileListItem Item { get; }
+
+        public ThumbnailLoadRequest(
+            IoFileListItem item)
+        {
+            Item = item;
+        }
     }
 }
