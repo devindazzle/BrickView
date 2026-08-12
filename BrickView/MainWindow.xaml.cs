@@ -3,7 +3,6 @@ using System.Diagnostics;
 using System.IO;
 using System.Windows;
 using System.Windows.Input;
-using System.Windows.Media.Imaging;
 
 namespace BrickView;
 
@@ -80,24 +79,6 @@ public partial class MainWindow : Window
     }
 
 
-    private void ThumbnailContainer_Loaded(object sender, RoutedEventArgs e)
-    {
-        if (sender is not FrameworkElement element)
-        {
-            return;
-        }
-
-        if (element.DataContext is not IoFileListItem item)
-        {
-            return;
-        }
-
-        _ = thumbnailLoader.LoadAsync(
-            item,
-            ThumbnailLoadPriority.Visible);
-    }
-
-
     private void FileList_MouseDoubleClick(
         object sender,
         MouseButtonEventArgs e)
@@ -140,7 +121,64 @@ public partial class MainWindow : Window
         int lastVisibleIndex =
             viewportEventArgs.LastVisibleIndex;
 
-        System.Diagnostics.Debug.WriteLine(
-            $"Viewport: {firstVisibleIndex}-{lastVisibleIndex}");
+        int itemCount =
+            FileList.Items.Count;
+
+        if (itemCount == 0)
+        {
+            return;
+        }
+
+        int clampedFirstIndex =
+            Math.Max(
+                0,
+                Math.Min(
+                    firstVisibleIndex,
+                    itemCount - 1));
+
+        int clampedLastIndex =
+            Math.Max(
+                clampedFirstIndex,
+                Math.Min(
+                    lastVisibleIndex,
+                    itemCount - 1));
+
+        for (
+            int index = clampedFirstIndex;
+            index <= clampedLastIndex;
+            index++)
+        {
+            if (FileList.Items[index]
+                is IoFileListItem item)
+            {
+                thumbnailLoader.LoadAsync(
+                    item,
+                    ThumbnailLoadPriority.Visible);
+            }
+        }
+
+        const int preloadCount = 8;
+
+        int preloadStart =
+            clampedLastIndex + 1;
+
+        int preloadEnd =
+            Math.Min(
+                itemCount - 1,
+                preloadStart + preloadCount - 1);
+
+        for (
+            int index = preloadStart;
+            index <= preloadEnd;
+            index++)
+        {
+            if (FileList.Items[index]
+                is IoFileListItem item)
+            {
+                thumbnailLoader.LoadAsync(
+                    item,
+                    ThumbnailLoadPriority.Preload);
+            }
+        }
     }
 }

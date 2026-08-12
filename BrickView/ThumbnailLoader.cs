@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace BrickView;
@@ -13,6 +14,11 @@ public class ThumbnailLoader
         ThumbnailLoadRequest,
         int> queue = new();
 
+    private readonly Dictionary<
+        IoFileListItem,
+        ThumbnailLoadPriority> queuedPriorities =
+        new();
+
     private readonly SemaphoreSlim queueSignal =
         new SemaphoreSlim(0);
 
@@ -20,6 +26,8 @@ public class ThumbnailLoader
 
     private readonly IoFileReader reader =
         new IoFileReader();
+
+    private int sequenceNumber;
 
     public ThumbnailLoader()
     {
@@ -34,23 +42,50 @@ public class ThumbnailLoader
         IoFileListItem item,
         ThumbnailLoadPriority priority)
     {
-        if (item.ThumbnailStatus !=
-            ThumbnailStatus.NotLoaded)
-        {
-            return Task.CompletedTask;
-        }
-
-        item.ThumbnailStatus =
-            ThumbnailStatus.Loading;
-
-        ThumbnailLoadRequest request =
-            new ThumbnailLoadRequest(item);
-
         lock (queueLock)
         {
+            if (item.ThumbnailStatus == ThumbnailStatus.Loaded ||
+                item.ThumbnailStatus == ThumbnailStatus.Missing ||
+                item.ThumbnailStatus == ThumbnailStatus.Error)
+            {
+                return Task.CompletedTask;
+            }
+
+            if (queuedPriorities.TryGetValue(
+                    item,
+                    out ThumbnailLoadPriority existingPriority))
+            {
+                if (priority >= existingPriority)
+                {
+                    return Task.CompletedTask;
+                }
+
+                queuedPriorities[item] = priority;
+            }
+            else
+            {
+                queuedPriorities.Add(
+                    item,
+                    priority);
+
+                item.ThumbnailStatus =
+                    ThumbnailStatus.Loading;
+            }
+
+            int queuePriority =
+                ((int)priority * 1_000_000)
+                + sequenceNumber;
+
+            sequenceNumber++;
+
+            ThumbnailLoadRequest request =
+                new ThumbnailLoadRequest(
+                    item,
+                    priority);
+
             queue.Enqueue(
                 request,
-                (int)priority);
+                queuePriority);
         }
 
         queueSignal.Release();
@@ -64,19 +99,31 @@ public class ThumbnailLoader
         {
             await queueSignal.WaitAsync();
 
-            ThumbnailLoadRequest? request = null;
+            ThumbnailLoadRequest? request;
 
             lock (queueLock)
             {
-                if (queue.Count > 0)
+                if (queue.Count == 0)
                 {
-                    request = queue.Dequeue();
+                    continue;
                 }
-            }
 
-            if (request is null)
-            {
-                continue;
+                request = queue.Dequeue();
+
+                if (!queuedPriorities.TryGetValue(
+                        request.Item,
+                        out ThumbnailLoadPriority currentPriority))
+                {
+                    continue;
+                }
+
+                if (currentPriority != request.Priority)
+                {
+                    continue;
+                }
+
+                queuedPriorities.Remove(
+                    request.Item);
             }
 
             await LoadThumbnailAsync(
@@ -199,10 +246,14 @@ public class ThumbnailLoader
     {
         public IoFileListItem Item { get; }
 
+        public ThumbnailLoadPriority Priority { get; }
+
         public ThumbnailLoadRequest(
-            IoFileListItem item)
+            IoFileListItem item,
+            ThumbnailLoadPriority priority)
         {
             Item = item;
+            Priority = priority;
         }
     }
 }
