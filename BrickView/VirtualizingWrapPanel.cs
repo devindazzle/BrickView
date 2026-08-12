@@ -7,6 +7,26 @@ namespace BrickView;
 
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
+    public static readonly RoutedEvent ViewportChangedEvent =
+    EventManager.RegisterRoutedEvent(
+        nameof(ViewportChanged),
+        RoutingStrategy.Bubble,
+        typeof(RoutedEventHandler),
+        typeof(VirtualizingWrapPanel));
+
+    public event RoutedEventHandler ViewportChanged
+    {
+        add
+        {
+            AddHandler(ViewportChangedEvent, value);
+        }
+
+        remove
+        {
+            RemoveHandler(ViewportChangedEvent, value);
+        }
+    }
+
     private const double ItemWidth = 200;
     private const double ItemHeight = 290;
 
@@ -17,6 +37,9 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     private double verticalOffset;
 
     private int columnCount = 1;
+
+    private int lastReportedFirstVisibleIndex = -1;
+    private int lastReportedLastVisibleIndex = -1;
 
     private ScrollViewer? scrollOwner;
 
@@ -223,6 +246,21 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         CleanupItems(
             firstVisibleIndex,
             lastVisibleIndex);
+
+        if (firstVisibleIndex != lastReportedFirstVisibleIndex || lastVisibleIndex != lastReportedLastVisibleIndex)
+        {
+            lastReportedFirstVisibleIndex =
+                firstVisibleIndex;
+
+            lastReportedLastVisibleIndex =
+                lastVisibleIndex;
+
+            RaiseEvent(
+                new ViewportChangedEventArgs(
+                        ViewportChangedEvent,
+                        firstVisibleIndex,
+                        lastVisibleIndex));
+        }
     }
 
     private void CleanupItems(

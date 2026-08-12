@@ -82,6 +82,51 @@ public class IoFileListItem : INotifyPropertyChanged
             thumbnailStatus = value;
 
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsThumbnailNotLoaded));
+            OnPropertyChanged(nameof(IsThumbnailLoading));
+            OnPropertyChanged(nameof(IsThumbnailLoaded));
+            OnPropertyChanged(nameof(IsThumbnailMissing));
+            OnPropertyChanged(nameof(IsThumbnailError));
+        }
+    }
+
+    public bool IsThumbnailNotLoaded
+    {
+        get
+        {
+            return ThumbnailStatus == ThumbnailStatus.NotLoaded;
+        }
+    }
+
+    public bool IsThumbnailLoading
+    {
+        get
+        {
+            return ThumbnailStatus == ThumbnailStatus.Loading;
+        }
+    }
+
+    public bool IsThumbnailLoaded
+    {
+        get
+        {
+            return ThumbnailStatus == ThumbnailStatus.Loaded;
+        }
+    }
+
+    public bool IsThumbnailMissing
+    {
+        get
+        {
+            return ThumbnailStatus == ThumbnailStatus.Missing;
+        }
+    }
+
+    public bool IsThumbnailError
+    {
+        get
+        {
+            return ThumbnailStatus == ThumbnailStatus.Error;
         }
     }
 

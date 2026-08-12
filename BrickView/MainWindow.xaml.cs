@@ -17,6 +17,10 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         thumbnailLoader = new ThumbnailLoader();
+
+        FileList.AddHandler(
+            VirtualizingWrapPanel.ViewportChangedEvent,
+            new RoutedEventHandler(FileList_ViewportChanged));
     }
 
 
@@ -120,5 +124,23 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
         }
+    }
+
+
+    private void FileList_ViewportChanged(object sender, RoutedEventArgs e)
+    {
+        if (e is not ViewportChangedEventArgs viewportEventArgs)
+        {
+            return;
+        }
+
+        int firstVisibleIndex =
+            viewportEventArgs.FirstVisibleIndex;
+
+        int lastVisibleIndex =
+            viewportEventArgs.LastVisibleIndex;
+
+        System.Diagnostics.Debug.WriteLine(
+            $"Viewport: {firstVisibleIndex}-{lastVisibleIndex}");
     }
 }
