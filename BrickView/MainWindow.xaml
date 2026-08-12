@@ -8,38 +8,50 @@
     Height="750"
     MinWidth="800"
     MinHeight="550"
-    Background="#202124"
+    Background="#2A2D34"
     Foreground="#F1F3F4"
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
 
     <Window.Resources>
 
-        <!--  Application colours  -->
+        <!--  =====================================================  -->
+        <!--  Studio-inspired colour palette  -->
+        <!--  =====================================================  -->
 
-        <SolidColorBrush x:Key="WindowBackgroundBrush" Color="#202124" />
+        <SolidColorBrush x:Key="OuterBackgroundBrush" Color="#2A2D34" />
 
-        <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#292A2D" />
+        <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#24252E" />
 
-        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#2B2D30" />
+        <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#2A2D34" />
 
-        <SolidColorBrush x:Key="CardBorderBrush" Color="#44474B" />
+        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#24252E" />
 
-        <SolidColorBrush x:Key="CardHoverBrush" Color="#34373B" />
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#343640" />
 
         <SolidColorBrush x:Key="CardSelectedBrush" Color="#394D5F" />
 
-        <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#18191B" />
+        <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#24252E" />
 
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F1F3F4" />
 
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#A8ABB0" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#92949D" />
 
         <SolidColorBrush x:Key="ErrorTextBrush" Color="#FF7B7B" />
 
         <SolidColorBrush x:Key="AccentBrush" Color="#4EA3FF" />
 
-        <!--  Button style  -->
+        <SolidColorBrush x:Key="ThumbnailOverlayBrush" Color="#B5000000" />
+
+        <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#303138" />
+
+        <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#50515A" />
+
+        <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#65666F" />
+
+        <!--  =====================================================  -->
+        <!--  Toolbar button  -->
+        <!--  =====================================================  -->
 
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
 
@@ -113,7 +125,9 @@
 
         </Style>
 
-        <!--  ListBoxItem style  -->
+        <!--  =====================================================  -->
+        <!--  ListBox item  -->
+        <!--  =====================================================  -->
 
         <Style x:Key="MocListBoxItemStyle" TargetType="ListBoxItem">
 
@@ -137,7 +151,7 @@
 
                         <Border
                             x:Name="ItemBorder"
-                            Padding="4"
+                            Padding="0"
                             Background="{TemplateBinding Background}"
                             BorderBrush="Transparent"
                             BorderThickness="1"
@@ -154,14 +168,6 @@
                         </Border>
 
                         <ControlTemplate.Triggers>
-
-                            <Trigger Property="IsMouseOver" Value="True">
-
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource CardHoverBrush}" />
-
-                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="#555A60" />
-
-                            </Trigger>
 
                             <Trigger Property="IsSelected" Value="True">
 
@@ -181,9 +187,119 @@
 
         </Style>
 
+        <!--  =====================================================  -->
+        <!--  Studio-inspired ScrollBar  -->
+        <!--  =====================================================  -->
+
+        <Style TargetType="ScrollBar">
+
+            <Setter Property="Width" Value="12" />
+
+            <Setter Property="Background" Value="{StaticResource ScrollBarTrackBrush}" />
+
+            <Setter Property="Foreground" Value="{StaticResource ScrollBarThumbBrush}" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="ScrollBar">
+
+                        <Grid Background="{TemplateBinding Background}">
+
+                            <Track
+                                x:Name="PART_Track"
+                                IsDirectionReversed="True"
+                                Orientation="{TemplateBinding Orientation}">
+
+                                <Track.Thumb>
+
+                                    <Thumb>
+
+                                        <Thumb.Style>
+
+                                            <Style TargetType="Thumb">
+
+                                                <Setter Property="Background" Value="{StaticResource ScrollBarThumbBrush}" />
+
+                                                <Setter Property="BorderThickness" Value="0" />
+
+                                                <Setter Property="Margin" Value="2,3" />
+
+                                                <Setter Property="Template">
+
+                                                    <Setter.Value>
+
+                                                        <ControlTemplate TargetType="Thumb">
+
+                                                            <Border
+                                                                x:Name="ThumbBorder"
+                                                                Background="{TemplateBinding Background}"
+                                                                CornerRadius="4" />
+
+                                                            <ControlTemplate.Triggers>
+
+                                                                <Trigger Property="IsMouseOver" Value="True">
+
+                                                                    <Setter TargetName="ThumbBorder" Property="Background" Value="{StaticResource ScrollBarThumbHoverBrush}" />
+
+                                                                </Trigger>
+
+                                                            </ControlTemplate.Triggers>
+
+                                                        </ControlTemplate>
+
+                                                    </Setter.Value>
+
+                                                </Setter>
+
+                                            </Style>
+
+                                        </Thumb.Style>
+
+                                    </Thumb>
+
+                                </Track.Thumb>
+
+                                <Track.DecreaseRepeatButton>
+
+                                    <RepeatButton Command="{x:Static ScrollBar.LineUpCommand}" Opacity="0" />
+
+                                </Track.DecreaseRepeatButton>
+
+                                <Track.IncreaseRepeatButton>
+
+                                    <RepeatButton Command="{x:Static ScrollBar.LineDownCommand}" Opacity="0" />
+
+                                </Track.IncreaseRepeatButton>
+
+                            </Track>
+
+                        </Grid>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+            <Style.Triggers>
+
+                <Trigger Property="Orientation" Value="Horizontal">
+
+                    <Setter Property="Height" Value="12" />
+
+                    <Setter Property="Width" Value="Auto" />
+
+                </Trigger>
+
+            </Style.Triggers>
+
+        </Style>
+
     </Window.Resources>
 
-    <Grid Background="{StaticResource WindowBackgroundBrush}">
+    <Grid Background="{StaticResource OuterBackgroundBrush}">
 
         <Grid.RowDefinitions>
 
@@ -195,12 +311,14 @@
 
         </Grid.RowDefinitions>
 
+        <!--  =====================================================  -->
         <!--  Top toolbar  -->
+        <!--  =====================================================  -->
 
         <Border
             Grid.Row="0"
             Background="{StaticResource ToolbarBackgroundBrush}"
-            BorderBrush="#37393D"
+            BorderBrush="#34363C"
             BorderThickness="0,0,0,1">
 
             <Grid Margin="16,0">
@@ -261,13 +379,15 @@
 
         </Border>
 
+        <!--  =====================================================  -->
         <!--  Folder information  -->
+        <!--  =====================================================  -->
 
         <Border
             Grid.Row="1"
             Padding="16,10"
-            Background="#242629"
-            BorderBrush="#34363A"
+            Background="{StaticResource OuterBackgroundBrush}"
+            BorderBrush="#34363C"
             BorderThickness="0,0,0,1">
 
             <TextBlock
@@ -279,236 +399,313 @@
 
         </Border>
 
-        <!--  MOC thumbnail grid  -->
+        <!--  =====================================================  -->
+        <!--  Thumbnail area  -->
+        <!--  =====================================================  -->
 
-        <ListBox
-            x:Name="FileList"
-            Grid.Row="2"
-            HorizontalContentAlignment="Stretch"
-            Background="Transparent"
-            BorderThickness="0"
-            ItemContainerStyle="{StaticResource MocListBoxItemStyle}"
-            MouseDoubleClick="FileList_MouseDoubleClick"
-            ScrollViewer.CanContentScroll="True"
-            ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-            ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <Border Grid.Row="2" Background="{StaticResource ContentBackgroundBrush}">
 
-            <!--  Virtualized grid  -->
+            <ListBox
+                x:Name="FileList"
+                HorizontalContentAlignment="Stretch"
+                Background="Transparent"
+                BorderThickness="0"
+                ItemContainerStyle="{StaticResource MocListBoxItemStyle}"
+                ScrollViewer.CanContentScroll="True"
+                ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                ScrollViewer.VerticalScrollBarVisibility="Auto">
 
-            <ListBox.ItemsPanel>
+                <!--  Virtualized grid  -->
 
-                <ItemsPanelTemplate>
+                <ListBox.ItemsPanel>
 
-                    <local:VirtualizingWrapPanel />
+                    <ItemsPanelTemplate>
 
-                </ItemsPanelTemplate>
+                        <local:VirtualizingWrapPanel />
 
-            </ListBox.ItemsPanel>
+                    </ItemsPanelTemplate>
 
-            <!--  MOC card  -->
+                </ListBox.ItemsPanel>
 
-            <ListBox.ItemTemplate>
+                <!--  MOC card  -->
 
-                <DataTemplate>
+                <ListBox.ItemTemplate>
 
-                    <StackPanel
-                        Width="180"
-                        Height="270"
-                        Margin="10">
+                    <DataTemplate>
 
-                        <!--  Thumbnail  -->
+                        <StackPanel
+                            Width="360"
+                            Height="290"
+                            Margin="9,10">
 
-                        <Border
-                            Width="180"
-                            Height="180"
-                            Background="{StaticResource ThumbnailBackgroundBrush}"
-                            BorderBrush="{StaticResource CardBorderBrush}"
-                            BorderThickness="1"
-                            SnapsToDevicePixels="True">
+                            <!--  Thumbnail  -->
 
-                            <Grid>
+                            <Border
+                                x:Name="ThumbnailBorder"
+                                Width="360"
+                                Height="240"
+                                Background="{StaticResource ThumbnailBackgroundBrush}"
+                                BorderBrush="{StaticResource CardBorderBrush}"
+                                BorderThickness="1"
+                                Cursor="Hand"
+                                MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"
+                                SnapsToDevicePixels="True">
 
-                                <!--  Thumbnail image  -->
+                                <Grid>
 
-                                <Image
-                                    Margin="5"
-                                    Source="{Binding Thumbnail}"
-                                    Stretch="Uniform">
+                                    <!--  Thumbnail  -->
 
-                                    <Image.Style>
+                                    <Image
+                                        Margin="5"
+                                        Source="{Binding Thumbnail}"
+                                        Stretch="Uniform">
 
-                                        <Style TargetType="Image">
+                                        <Image.Style>
 
-                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style TargetType="Image">
 
-                                            <Style.Triggers>
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                                                <DataTrigger Binding="{Binding IsThumbnailLoaded}" Value="True">
+                                                <Style.Triggers>
 
-                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger Binding="{Binding IsThumbnailLoaded}" Value="True">
 
-                                                </DataTrigger>
+                                                        <Setter Property="Visibility" Value="Visible" />
 
-                                            </Style.Triggers>
+                                                    </DataTrigger>
 
-                                        </Style>
+                                                </Style.Triggers>
 
-                                    </Image.Style>
+                                            </Style>
 
-                                </Image>
+                                        </Image.Style>
 
-                                <!--  Loading  -->
+                                    </Image>
 
-                                <TextBlock
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="Loading...">
+                                    <!--  Loading  -->
 
-                                    <TextBlock.Style>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="Loading...">
 
-                                        <Style TargetType="TextBlock">
+                                        <TextBlock.Style>
 
-                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style TargetType="TextBlock">
 
-                                            <Style.Triggers>
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                                                <DataTrigger Binding="{Binding IsThumbnailLoading}" Value="True">
+                                                <Style.Triggers>
 
-                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger Binding="{Binding IsThumbnailLoading}" Value="True">
 
-                                                </DataTrigger>
+                                                        <Setter Property="Visibility" Value="Visible" />
 
-                                            </Style.Triggers>
+                                                    </DataTrigger>
 
-                                        </Style>
+                                                </Style.Triggers>
 
-                                    </TextBlock.Style>
+                                            </Style>
 
-                                </TextBlock>
+                                        </TextBlock.Style>
 
-                                <!--  Not loaded  -->
+                                    </TextBlock>
 
-                                <TextBlock
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="Not loaded">
+                                    <!--  Not loaded  -->
 
-                                    <TextBlock.Style>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="Not loaded">
 
-                                        <Style TargetType="TextBlock">
+                                        <TextBlock.Style>
 
-                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style TargetType="TextBlock">
 
-                                            <Style.Triggers>
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                                                <DataTrigger Binding="{Binding IsThumbnailNotLoaded}" Value="True">
+                                                <Style.Triggers>
 
-                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger Binding="{Binding IsThumbnailNotLoaded}" Value="True">
 
-                                                </DataTrigger>
+                                                        <Setter Property="Visibility" Value="Visible" />
 
-                                            </Style.Triggers>
+                                                    </DataTrigger>
 
-                                        </Style>
+                                                </Style.Triggers>
 
-                                    </TextBlock.Style>
+                                            </Style>
 
-                                </TextBlock>
+                                        </TextBlock.Style>
 
-                                <!--  No thumbnail  -->
+                                    </TextBlock>
 
-                                <TextBlock
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="No thumbnail">
+                                    <!--  No thumbnail  -->
 
-                                    <TextBlock.Style>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        Foreground="{StaticResource SecondaryTextBrush}"
+                                        Text="No thumbnail">
 
-                                        <Style TargetType="TextBlock">
+                                        <TextBlock.Style>
 
-                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style TargetType="TextBlock">
 
-                                            <Style.Triggers>
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                                                <DataTrigger Binding="{Binding IsThumbnailMissing}" Value="True">
+                                                <Style.Triggers>
 
-                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger Binding="{Binding IsThumbnailMissing}" Value="True">
 
-                                                </DataTrigger>
+                                                        <Setter Property="Visibility" Value="Visible" />
 
-                                            </Style.Triggers>
+                                                    </DataTrigger>
 
-                                        </Style>
+                                                </Style.Triggers>
 
-                                    </TextBlock.Style>
+                                            </Style>
 
-                                </TextBlock>
+                                        </TextBlock.Style>
 
-                                <!--  Invalid file  -->
+                                    </TextBlock>
 
-                                <TextBlock
-                                    HorizontalAlignment="Center"
-                                    VerticalAlignment="Center"
-                                    FontWeight="Bold"
-                                    Foreground="{StaticResource ErrorTextBrush}"
-                                    Text="⚠ Invalid file">
+                                    <!--  Invalid file  -->
 
-                                    <TextBlock.Style>
+                                    <TextBlock
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontWeight="Bold"
+                                        Foreground="{StaticResource ErrorTextBrush}"
+                                        Text="⚠ Invalid file">
 
-                                        <Style TargetType="TextBlock">
+                                        <TextBlock.Style>
 
-                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style TargetType="TextBlock">
 
-                                            <Style.Triggers>
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                                                <DataTrigger Binding="{Binding IsThumbnailError}" Value="True">
+                                                <Style.Triggers>
 
-                                                    <Setter Property="Visibility" Value="Visible" />
+                                                    <DataTrigger Binding="{Binding IsThumbnailError}" Value="True">
 
-                                                </DataTrigger>
+                                                        <Setter Property="Visibility" Value="Visible" />
 
-                                            </Style.Triggers>
+                                                    </DataTrigger>
 
-                                        </Style>
+                                                </Style.Triggers>
 
-                                    </TextBlock.Style>
+                                            </Style>
 
-                                </TextBlock>
+                                        </TextBlock.Style>
 
-                            </Grid>
+                                    </TextBlock>
 
-                        </Border>
+                                    <!--  Studio-style hover overlay  -->
 
-                        <!--  File name  -->
+                                    <Border Background="{StaticResource ThumbnailOverlayBrush}" IsHitTestVisible="False">
 
-                        <TextBlock
-                            Margin="2,8,2,0"
-                            FontSize="13"
-                            FontWeight="SemiBold"
-                            Foreground="{StaticResource PrimaryTextBrush}"
-                            Text="{Binding FileName}"
-                            TextTrimming="CharacterEllipsis"
-                            ToolTip="{Binding FilePath}" />
+                                        <Border.Style>
 
-                        <!--  Error message  -->
+                                            <Style TargetType="Border">
 
-                        <TextBlock
-                            Margin="2,3,2,0"
-                            FontSize="11"
-                            Foreground="{StaticResource ErrorTextBrush}"
-                            Text="{Binding ErrorMessage}"
-                            TextWrapping="Wrap" />
+                                                <Setter Property="Visibility" Value="Collapsed" />
 
-                    </StackPanel>
+                                                <Setter Property="Opacity" Value="0" />
 
-                </DataTemplate>
+                                                <Style.Triggers>
 
-            </ListBox.ItemTemplate>
+                                                    <MultiDataTrigger>
 
-        </ListBox>
+                                                        <MultiDataTrigger.Conditions>
+
+                                                            <Condition Binding="{Binding IsThumbnailLoaded}" Value="True" />
+
+                                                            <Condition Binding="{Binding IsMouseOver, ElementName=ThumbnailBorder}" Value="True" />
+
+                                                        </MultiDataTrigger.Conditions>
+
+                                                        <Setter Property="Visibility" Value="Visible" />
+
+                                                        <Setter Property="Opacity" Value="1" />
+
+                                                    </MultiDataTrigger>
+
+                                                </Style.Triggers>
+
+                                            </Style>
+
+                                        </Border.Style>
+
+                                        <Grid>
+
+                                            <Border
+                                                Width="114"
+                                                Height="38"
+                                                HorizontalAlignment="Center"
+                                                VerticalAlignment="Center"
+                                                Background="#3A3C40"
+                                                BorderBrush="#777B82"
+                                                BorderThickness="1"
+                                                CornerRadius="4">
+
+                                                <TextBlock
+                                                    HorizontalAlignment="Center"
+                                                    VerticalAlignment="Center"
+                                                    FontSize="14"
+                                                    FontWeight="SemiBold"
+                                                    Foreground="White"
+                                                    Text="Open file" />
+
+                                            </Border>
+
+                                        </Grid>
+
+                                    </Border>
+
+                                </Grid>
+
+                            </Border>
+
+                            <!--  File name  -->
+
+                            <TextBlock
+                                Margin="2,8,2,0"
+                                FontSize="13"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource PrimaryTextBrush}"
+                                Text="{Binding FileName, StringFormat={}{0}.io}"
+                                TextTrimming="CharacterEllipsis"
+                                ToolTip="{Binding FilePath}" />
+
+                            <!--  Parts count placeholder  -->
+
+                            <TextBlock
+                                Margin="2,3,2,0"
+                                FontSize="11"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="" />
+
+                            <!--  Error message  -->
+
+                            <TextBlock
+                                Margin="2,3,2,0"
+                                FontSize="11"
+                                Foreground="{StaticResource ErrorTextBrush}"
+                                Text="{Binding ErrorMessage}"
+                                TextWrapping="Wrap" />
+
+                        </StackPanel>
+
+                    </DataTemplate>
+
+                </ListBox.ItemTemplate>
+
+            </ListBox>
+
+        </Border>
 
     </Grid>
 

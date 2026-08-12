@@ -1,4 +1,6 @@
-﻿using System.Windows;
+﻿using System;
+using System.Collections.Specialized;
+using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -7,102 +9,126 @@ namespace BrickView;
 
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
-    public static readonly RoutedEvent ViewportChangedEvent =
-    EventManager.RegisterRoutedEvent(
-        nameof(ViewportChanged),
-        RoutingStrategy.Bubble,
-        typeof(RoutedEventHandler),
-        typeof(VirtualizingWrapPanel));
+    private const double ItemWidth = 379;
 
-    public event RoutedEventHandler ViewportChanged
-    {
-        add
-        {
-            AddHandler(ViewportChangedEvent, value);
-        }
-
-        remove
-        {
-            RemoveHandler(ViewportChangedEvent, value);
-        }
-    }
-
-    private const double ItemWidth = 200;
-    private const double ItemHeight = 290;
+    private const double ItemHeight = 310;
 
     private Size extent = new Size(0, 0);
+
     private Size viewport = new Size(0, 0);
 
     private double horizontalOffset;
+
     private double verticalOffset;
 
     private int columnCount = 1;
 
     private int lastReportedFirstVisibleIndex = -1;
+
     private int lastReportedLastVisibleIndex = -1;
 
     private ScrollViewer? scrollOwner;
+
+    public static readonly RoutedEvent ViewportChangedEvent =
+        EventManager.RegisterRoutedEvent(
+            nameof(ViewportChanged),
+            RoutingStrategy.Bubble,
+            typeof(RoutedEventHandler),
+            typeof(VirtualizingWrapPanel));
+
+    public event RoutedEventHandler ViewportChanged
+    {
+        add
+        {
+            AddHandler(
+                ViewportChangedEvent,
+                value);
+        }
+
+        remove
+        {
+            RemoveHandler(
+                ViewportChangedEvent,
+                value);
+        }
+    }
 
     private ItemsControl? ItemsOwner
     {
         get
         {
-            return ItemsControl.GetItemsOwner(this);
+            return ItemsControl.GetItemsOwner(
+                this);
         }
     }
 
-    #region Layout
-
-    protected override Size MeasureOverride(Size availableSize)
+    protected override Size MeasureOverride(
+        Size availableSize)
     {
-        ItemsControl? itemsOwner = ItemsOwner;
+        ItemsControl? itemsOwner =
+            ItemsOwner;
 
         if (itemsOwner is null)
         {
             return availableSize;
         }
 
-        int itemCount = itemsOwner.Items.Count;
+        int itemCount =
+            itemsOwner.Items.Count;
 
         if (itemCount == 0)
         {
-            extent = new Size(
-                availableSize.Width,
-                0);
+            extent =
+                new Size(
+                    availableSize.Width,
+                    0);
 
-            viewport = availableSize;
+            viewport =
+                availableSize;
 
             scrollOwner?.InvalidateScrollInfo();
 
             return availableSize;
         }
 
-        double availableWidth = availableSize.Width;
+        double availableWidth =
+            availableSize.Width;
 
-        if (double.IsInfinity(availableWidth) ||
+        if (double.IsInfinity(
+                availableWidth) ||
             availableWidth <= 0)
         {
-            availableWidth = ItemWidth;
+            availableWidth =
+                ItemWidth;
         }
 
-        columnCount = Math.Max(
-            1,
-            (int)Math.Floor(
-                availableWidth / ItemWidth));
+        columnCount =
+            Math.Max(
+                1,
+                (int)Math.Floor(
+                    availableWidth /
+                    ItemWidth));
 
-        int rowCount = (int)Math.Ceiling(
-            (double)itemCount / columnCount);
+        int rowCount =
+            (int)Math.Ceiling(
+                (double)itemCount /
+                columnCount);
 
-        double extentHeight = rowCount * ItemHeight;
+        double extentHeight =
+            rowCount *
+            ItemHeight;
 
-        viewport = availableSize;
+        viewport =
+            availableSize;
 
-        extent = new Size(
-            availableWidth,
-            extentHeight);
+        extent =
+            new Size(
+                availableWidth,
+                extentHeight);
 
-        verticalOffset = ClampVerticalOffset(
-            verticalOffset);
+        verticalOffset =
+            ClampVerticalOffset(
+                verticalOffset);
 
         GenerateVisibleItems(
             itemCount,
@@ -113,17 +139,24 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         return availableSize;
     }
 
-    protected override Size ArrangeOverride(Size finalSize)
+    protected override Size ArrangeOverride(
+        Size finalSize)
     {
         IItemContainerGenerator generator =
             ItemContainerGenerator;
 
-        for (int i = 0; i < InternalChildren.Count; i++)
+        for (
+            int i = 0;
+            i < InternalChildren.Count;
+            i++)
         {
-            UIElement child = InternalChildren[i];
+            UIElement child =
+                InternalChildren[i];
 
             GeneratorPosition position =
-                new GeneratorPosition(i, 0);
+                new GeneratorPosition(
+                    i,
+                    0);
 
             int itemIndex =
                 generator.IndexFromGeneratorPosition(
@@ -134,14 +167,22 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                 continue;
             }
 
-            int row = itemIndex / columnCount;
-            int column = itemIndex % columnCount;
+            int row =
+                itemIndex /
+                columnCount;
 
-            double x = column * ItemWidth;
+            int column =
+                itemIndex %
+                columnCount;
+
+            double x =
+                column *
+                ItemWidth;
 
             double y =
-                row * ItemHeight
-                - verticalOffset;
+                row *
+                ItemHeight -
+                verticalOffset;
 
             child.Arrange(
                 new Rect(
@@ -164,25 +205,36 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         double viewportBottom =
-            verticalOffset + availableSize.Height;
+            verticalOffset +
+            availableSize.Height;
 
-        int firstVisibleRow = Math.Max(
-            0,
-            (int)Math.Floor(
-                verticalOffset / ItemHeight));
+        int firstVisibleRow =
+            Math.Max(
+                0,
+                (int)Math.Floor(
+                    verticalOffset /
+                    ItemHeight));
 
-        int lastVisibleRow = Math.Min(
-            (int)Math.Ceiling(
-                viewportBottom / ItemHeight),
-            (int)Math.Ceiling(
-                (double)itemCount / columnCount) - 1);
+        int lastVisibleRow =
+            Math.Min(
+                (int)Math.Ceiling(
+                    viewportBottom /
+                    ItemHeight),
+                (int)Math.Ceiling(
+                    (double)itemCount /
+                    columnCount) -
+                1);
 
         int firstVisibleIndex =
-            firstVisibleRow * columnCount;
+            firstVisibleRow *
+            columnCount;
 
-        int lastVisibleIndex = Math.Min(
-            itemCount - 1,
-            ((lastVisibleRow + 1) * columnCount) - 1);
+        int lastVisibleIndex =
+            Math.Min(
+                itemCount - 1,
+                ((lastVisibleRow + 1) *
+                 columnCount) -
+                1);
 
         IItemContainerGenerator generator =
             ItemContainerGenerator;
@@ -203,7 +255,8 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                 true))
         {
             for (
-                int itemIndex = firstVisibleIndex;
+                int itemIndex =
+                    firstVisibleIndex;
                 itemIndex <= lastVisibleIndex;
                 itemIndex++)
             {
@@ -219,9 +272,11 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
                 if (newlyRealized)
                 {
-                    if (childIndex >= InternalChildren.Count)
+                    if (childIndex >=
+                        InternalChildren.Count)
                     {
-                        AddInternalChild(child);
+                        AddInternalChild(
+                            child);
                     }
                     else
                     {
@@ -247,7 +302,11 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             firstVisibleIndex,
             lastVisibleIndex);
 
-        if (firstVisibleIndex != lastReportedFirstVisibleIndex || lastVisibleIndex != lastReportedLastVisibleIndex)
+        if (
+            firstVisibleIndex !=
+                lastReportedFirstVisibleIndex ||
+            lastVisibleIndex !=
+                lastReportedLastVisibleIndex)
         {
             lastReportedFirstVisibleIndex =
                 firstVisibleIndex;
@@ -257,9 +316,9 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
             RaiseEvent(
                 new ViewportChangedEventArgs(
-                        ViewportChangedEvent,
-                        firstVisibleIndex,
-                        lastVisibleIndex));
+                    ViewportChangedEvent,
+                    firstVisibleIndex,
+                    lastVisibleIndex));
         }
     }
 
@@ -271,20 +330,25 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             ItemContainerGenerator;
 
         for (
-            int i = InternalChildren.Count - 1;
+            int i =
+                InternalChildren.Count - 1;
             i >= 0;
             i--)
         {
             GeneratorPosition position =
-                new GeneratorPosition(i, 0);
+                new GeneratorPosition(
+                    i,
+                    0);
 
             int itemIndex =
                 generator.IndexFromGeneratorPosition(
                     position);
 
             if (
-                itemIndex < firstVisibleIndex ||
-                itemIndex > lastVisibleIndex)
+                itemIndex <
+                    firstVisibleIndex ||
+                itemIndex >
+                    lastVisibleIndex)
             {
                 generator.Remove(
                     position,
@@ -297,13 +361,12 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
     }
 
-    #endregion
-
-    #region Items changed
-
-    protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)
+    protected override void OnItemsChanged(
+        object sender,
+        ItemsChangedEventArgs args)
     {
         lastReportedFirstVisibleIndex = -1;
+
         lastReportedLastVisibleIndex = -1;
 
         InvalidateMeasure();
@@ -312,8 +375,6 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             sender,
             args);
     }
-
-    #endregion
 
     #region IScrollInfo
 
@@ -393,73 +454,85 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     public void LineDown()
     {
         SetVerticalOffset(
-            verticalOffset + ItemHeight);
+            verticalOffset +
+            ItemHeight);
     }
 
     public void LineUp()
     {
         SetVerticalOffset(
-            verticalOffset - ItemHeight);
+            verticalOffset -
+            ItemHeight);
     }
 
     public void LineLeft()
     {
         SetHorizontalOffset(
-            horizontalOffset - ItemWidth);
+            horizontalOffset -
+            ItemWidth);
     }
 
     public void LineRight()
     {
         SetHorizontalOffset(
-            horizontalOffset + ItemWidth);
+            horizontalOffset +
+            ItemWidth);
     }
 
     public void MouseWheelDown()
     {
         SetVerticalOffset(
-            verticalOffset + ItemHeight);
+            verticalOffset +
+            ItemHeight);
     }
 
     public void MouseWheelUp()
     {
         SetVerticalOffset(
-            verticalOffset - ItemHeight);
+            verticalOffset -
+            ItemHeight);
     }
 
     public void MouseWheelLeft()
     {
         SetHorizontalOffset(
-            horizontalOffset - ItemWidth);
+            horizontalOffset -
+            ItemWidth);
     }
 
     public void MouseWheelRight()
     {
         SetHorizontalOffset(
-            horizontalOffset + ItemWidth);
+            horizontalOffset +
+            ItemWidth);
     }
 
     public void PageDown()
     {
         SetVerticalOffset(
-            verticalOffset + viewport.Height);
+            verticalOffset +
+            viewport.Height);
     }
 
     public void PageUp()
     {
         SetVerticalOffset(
-            verticalOffset - viewport.Height);
+            verticalOffset -
+            viewport.Height);
     }
 
     public void PageLeft()
     {
         SetHorizontalOffset(
-            horizontalOffset - viewport.Width);
+            horizontalOffset -
+            viewport.Width);
     }
 
     public void PageRight()
     {
         SetHorizontalOffset(
-            horizontalOffset + viewport.Width);
+            horizontalOffset +
+            viewport.Width);
     }
 
     public void SetHorizontalOffset(
@@ -470,22 +543,27 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             return;
         }
 
-        double newOffset = Math.Max(
-            0,
-            Math.Min(
-                offset,
-                Math.Max(
-                    0,
-                    ExtentWidth - ViewportWidth)));
+        double newOffset =
+            Math.Max(
+                0,
+                Math.Min(
+                    offset,
+                    Math.Max(
+                        0,
+                        ExtentWidth -
+                        ViewportWidth)));
 
-        if (Math.Abs(
-                newOffset - horizontalOffset)
+        if (
+            Math.Abs(
+                newOffset -
+                horizontalOffset)
             < 0.1)
         {
             return;
         }
 
-        horizontalOffset = newOffset;
+        horizontalOffset =
+            newOffset;
 
         InvalidateMeasure();
 
@@ -501,16 +579,20 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         }
 
         double newOffset =
-            ClampVerticalOffset(offset);
+            ClampVerticalOffset(
+                offset);
 
-        if (Math.Abs(
-                newOffset - verticalOffset)
+        if (
+            Math.Abs(
+                newOffset -
+                verticalOffset)
             < 0.1)
         {
             return;
         }
 
-        verticalOffset = newOffset;
+        verticalOffset =
+            newOffset;
 
         InvalidateMeasure();
 
@@ -529,15 +611,17 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
         if (rectangle.Top < 0)
         {
             SetVerticalOffset(
-                verticalOffset + rectangle.Top);
+                verticalOffset +
+                rectangle.Top);
         }
         else if (
-            rectangle.Bottom > ViewportHeight)
+            rectangle.Bottom >
+            ViewportHeight)
         {
             SetVerticalOffset(
-                verticalOffset
-                + rectangle.Bottom
-                - ViewportHeight);
+                verticalOffset +
+                rectangle.Bottom -
+                ViewportHeight);
         }
 
         return rectangle;
@@ -552,7 +636,8 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                 offset,
                 Math.Max(
                     0,
-                    ExtentHeight - ViewportHeight)));
+                    ExtentHeight -
+                    ViewportHeight)));
     }
 
     #endregion

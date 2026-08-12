@@ -1,6 +1,11 @@
 ﻿using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -22,12 +27,17 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        thumbnailLoader = new(180);
+        thumbnailLoader =
+            new ThumbnailLoader(360);
 
-        folderDiffService = new();
+        folderDiffService =
+            new FolderDiffService();
 
-        folderWatcher = new IoFolderWatcher();
-        folderWatcher.FolderChanged += FolderWatcher_FolderChanged;
+        folderWatcher =
+            new IoFolderWatcher();
+
+        folderWatcher.FolderChanged +=
+            FolderWatcher_FolderChanged;
 
         FileList.AddHandler(
             VirtualizingWrapPanel.ViewportChangedEvent,
@@ -39,32 +49,39 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        OpenFolderDialog dialog = new OpenFolderDialog
-        {
-            Title = "Pick Folder"
-        };
+        OpenFolderDialog dialog =
+            new OpenFolderDialog
+            {
+                Title = "Pick Folder"
+            };
 
-        bool? result = dialog.ShowDialog();
+        bool? result =
+            dialog.ShowDialog();
 
         if (result != true)
         {
             return;
         }
 
-        string folder = dialog.FolderName;
+        string folder =
+            dialog.FolderName;
 
         if (string.IsNullOrWhiteSpace(folder))
         {
             return;
         }
 
-        currentFolder = folder;
+        currentFolder =
+            folder;
 
-        folderWatcher.Start(folder);
+        folderWatcher.Start(
+            folder);
 
-        FolderText.Text = folder;
+        FolderText.Text =
+            folder;
 
-        await LoadIoFilesAsync(folder);
+        await LoadIoFilesAsync(
+            folder);
     }
 
     private async void RefreshView_Click(
@@ -79,18 +96,20 @@ public partial class MainWindow : Window
     {
         FileList.Items.Clear();
 
-        string[] files = Directory.GetFiles(
-            folder,
-            "*.io",
-            SearchOption.TopDirectoryOnly)
-            .OrderBy(
-                file => Path.GetFileName(file),
-                StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        string[] files =
+            Directory.GetFiles(
+                folder,
+                "*.io",
+                SearchOption.TopDirectoryOnly)
+                .OrderBy(
+                    file => Path.GetFileName(file),
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
         foreach (string file in files)
         {
-            AddFileListItem(file);
+            AddFileListItem(
+                file);
         }
 
         await Task.CompletedTask;
@@ -98,12 +117,14 @@ public partial class MainWindow : Window
 
     private async Task RefreshCurrentFolderAsync()
     {
-        if (string.IsNullOrWhiteSpace(currentFolder))
+        if (string.IsNullOrWhiteSpace(
+                currentFolder))
         {
             return;
         }
 
-        if (!Directory.Exists(currentFolder))
+        if (!Directory.Exists(
+                currentFolder))
         {
             MessageBox.Show(
                 "The selected folder no longer exists.",
@@ -115,19 +136,21 @@ public partial class MainWindow : Window
 
             folderWatcher.Stop();
 
-            FolderText.Text = string.Empty;
+            FolderText.Text =
+                string.Empty;
 
             return;
         }
 
-        string[] currentFiles = Directory.GetFiles(
-            currentFolder,
-            "*.io",
-            SearchOption.TopDirectoryOnly)
-            .OrderBy(
-                file => Path.GetFileName(file),
-                StringComparer.OrdinalIgnoreCase)
-            .ToArray();
+        string[] currentFiles =
+            Directory.GetFiles(
+                currentFolder,
+                "*.io",
+                SearchOption.TopDirectoryOnly)
+                .OrderBy(
+                    file => Path.GetFileName(file),
+                    StringComparer.OrdinalIgnoreCase)
+                .ToArray();
 
         List<IoFileListItem> existingItems =
             FileList.Items
@@ -139,7 +162,8 @@ public partial class MainWindow : Window
                 existingItems,
                 currentFiles);
 
-        foreach (FileChange change in diff.Changes)
+        foreach (FileChange change
+                 in diff.Changes)
         {
             switch (change.ChangeType)
             {
@@ -178,13 +202,15 @@ public partial class MainWindow : Window
     private void AddFileListItem(
         string filePath)
     {
-        if (!File.Exists(filePath))
+        if (!File.Exists(
+                filePath))
         {
             return;
         }
 
         FileInfo fileInfo =
-            new FileInfo(filePath);
+            new FileInfo(
+                filePath);
 
         string fileName =
             Path.GetFileNameWithoutExtension(
@@ -199,7 +225,8 @@ public partial class MainWindow : Window
                 null,
                 null);
 
-        FileList.Items.Add(item);
+        FileList.Items.Add(
+            item);
     }
 
     private void RemoveFileListItem(
@@ -217,7 +244,8 @@ public partial class MainWindow : Window
 
         if (item is not null)
         {
-            FileList.Items.Remove(item);
+            FileList.Items.Remove(
+                item);
         }
     }
 
@@ -239,13 +267,15 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (!File.Exists(filePath))
+        if (!File.Exists(
+                filePath))
         {
             return;
         }
 
         FileInfo fileInfo =
-            new FileInfo(filePath);
+            new FileInfo(
+                filePath);
 
         item.UpdateFileInfo(
             fileInfo.Length,
@@ -266,9 +296,11 @@ public partial class MainWindow : Window
 
         FileList.Items.Clear();
 
-        foreach (IoFileListItem item in sortedItems)
+        foreach (IoFileListItem item
+                 in sortedItems)
         {
-            FileList.Items.Add(item);
+            FileList.Items.Add(
+                item);
         }
     }
 
@@ -276,7 +308,8 @@ public partial class MainWindow : Window
         object sender,
         RoutedEventArgs e)
     {
-        if (e is not ViewportChangedEventArgs viewportEventArgs)
+        if (e is not ViewportChangedEventArgs
+            viewportEventArgs)
         {
             return;
         }
@@ -331,7 +364,9 @@ public partial class MainWindow : Window
         int preloadEnd =
             Math.Min(
                 itemCount - 1,
-                preloadStart + preloadCount - 1);
+                preloadStart +
+                preloadCount -
+                1);
 
         for (
             int index = preloadStart;
@@ -345,6 +380,47 @@ public partial class MainWindow : Window
                     item,
                     ThumbnailLoadPriority.Preload);
             }
+        }
+    }
+
+    private void Thumbnail_MouseLeftButtonUp(
+        object sender,
+        MouseButtonEventArgs e)
+    {
+        if (sender is not FrameworkElement element)
+        {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item)
+        {
+            return;
+        }
+
+        if (item.HasError)
+        {
+            return;
+        }
+
+        try
+        {
+            Process.Start(
+                new ProcessStartInfo
+                {
+                    FileName = item.FilePath,
+                    UseShellExecute = true
+                });
+
+            e.Handled = true;
+        }
+        catch (Exception exception)
+        {
+            MessageBox.Show(
+                $"Could not open the file.\n\n{exception.Message}",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
         }
     }
 
@@ -399,39 +475,11 @@ public partial class MainWindow : Window
         EventArgs e)
     {
         folderRefreshCancellation?.Cancel();
+
         folderRefreshCancellation?.Dispose();
 
         folderWatcher.Dispose();
 
         base.OnClosed(e);
-    }
-
-    private void FileList_MouseDoubleClick(
-        object sender,
-        MouseButtonEventArgs e)
-    {
-        if (FileList.SelectedItem
-            is not IoFileListItem item)
-        {
-            return;
-        }
-
-        try
-        {
-            Process.Start(
-                new ProcessStartInfo
-                {
-                    FileName = item.FilePath,
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception exception)
-        {
-            MessageBox.Show(
-                $"Could not open the file.\n\n{exception.Message}",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
     }
 }
