@@ -2,6 +2,7 @@
     x:Class="BrickView.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="clr-namespace:BrickView"
     Title="BrickView"
     Width="1000"
     Height="700">
@@ -71,7 +72,87 @@
                                 <Image
                                     Margin="5"
                                     Source="{Binding Thumbnail}"
-                                    Stretch="Uniform" />
+                                    Stretch="Uniform">
+
+                                    <Image.Style>
+
+                                        <Style TargetType="Image">
+
+                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                            <Style.Triggers>
+
+                                                <DataTrigger Binding="{Binding ThumbnailStatus}" Value="{x:Static local:ThumbnailStatus.Loaded}">
+
+                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                </DataTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </Image.Style>
+
+                                </Image>
+
+                                <!--  Loading  -->
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="Gray"
+                                    Text="Loading...">
+
+                                    <TextBlock.Style>
+
+                                        <Style TargetType="TextBlock">
+
+                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                            <Style.Triggers>
+
+                                                <DataTrigger Binding="{Binding ThumbnailStatus}" Value="{x:Static local:ThumbnailStatus.Loading}">
+
+                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                </DataTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </TextBlock.Style>
+
+                                </TextBlock>
+
+                                <!--  Not loaded  -->
+                                <TextBlock
+                                    HorizontalAlignment="Center"
+                                    VerticalAlignment="Center"
+                                    Foreground="Gray"
+                                    Text="Not loaded">
+
+                                    <TextBlock.Style>
+
+                                        <Style TargetType="TextBlock">
+
+                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                            <Style.Triggers>
+
+                                                <DataTrigger Binding="{Binding ThumbnailStatus}" Value="{x:Static local:ThumbnailStatus.NotLoaded}">
+
+                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                </DataTrigger>
+
+                                            </Style.Triggers>
+
+                                        </Style>
+
+                                    </TextBlock.Style>
+
+                                </TextBlock>
 
                                 <!--  No thumbnail  -->
                                 <TextBlock
@@ -88,19 +169,11 @@
 
                                             <Style.Triggers>
 
-                                                <MultiDataTrigger>
-
-                                                    <MultiDataTrigger.Conditions>
-
-                                                        <Condition Binding="{Binding Thumbnail}" Value="{x:Null}" />
-
-                                                        <Condition Binding="{Binding HasError}" Value="False" />
-
-                                                    </MultiDataTrigger.Conditions>
+                                                <DataTrigger Binding="{Binding ThumbnailStatus}" Value="{x:Static local:ThumbnailStatus.Missing}">
 
                                                     <Setter Property="Visibility" Value="Visible" />
 
-                                                </MultiDataTrigger>
+                                                </DataTrigger>
 
                                             </Style.Triggers>
 
@@ -126,7 +199,7 @@
 
                                             <Style.Triggers>
 
-                                                <DataTrigger Binding="{Binding HasError}" Value="True">
+                                                <DataTrigger Binding="{Binding ThumbnailStatus}" Value="{x:Static local:ThumbnailStatus.Error}">
 
                                                     <Setter Property="Visibility" Value="Visible" />
 
