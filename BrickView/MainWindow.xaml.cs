@@ -1,11 +1,6 @@
 ﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -27,17 +22,12 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        thumbnailLoader =
-            new ThumbnailLoader();
+        thumbnailLoader = new(180);
 
-        folderDiffService =
-            new FolderDiffService();
+        folderDiffService = new();
 
-        folderWatcher =
-            new IoFolderWatcher();
-
-        folderWatcher.FolderChanged +=
-            FolderWatcher_FolderChanged;
+        folderWatcher = new IoFolderWatcher();
+        folderWatcher.FolderChanged += FolderWatcher_FolderChanged;
 
         FileList.AddHandler(
             VirtualizingWrapPanel.ViewportChangedEvent,

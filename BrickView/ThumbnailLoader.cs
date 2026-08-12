@@ -8,6 +8,8 @@ public class ThumbnailLoader
 {
     private const int WorkerCount = 4;
 
+    private readonly double thumbnailWidth;
+
     private readonly object queueLock = new();
 
     private readonly PriorityQueue<
@@ -29,9 +31,21 @@ public class ThumbnailLoader
 
     private int sequenceNumber;
 
-    public ThumbnailLoader()
+    public ThumbnailLoader(
+        double thumbnailWidth)
     {
-        for (int i = 0; i < WorkerCount; i++)
+        if (thumbnailWidth <= 0)
+        {
+            throw new ArgumentOutOfRangeException(
+                nameof(thumbnailWidth));
+        }
+
+        this.thumbnailWidth =
+            thumbnailWidth;
+
+        for (int i = 0;
+             i < WorkerCount;
+             i++)
         {
             workers.Add(
                 Task.Run(WorkerAsync));
@@ -44,9 +58,12 @@ public class ThumbnailLoader
     {
         lock (queueLock)
         {
-            if (item.ThumbnailStatus == ThumbnailStatus.Loaded ||
-                item.ThumbnailStatus == ThumbnailStatus.Missing ||
-                item.ThumbnailStatus == ThumbnailStatus.Error)
+            if (item.ThumbnailStatus ==
+                    ThumbnailStatus.Loaded ||
+                item.ThumbnailStatus ==
+                    ThumbnailStatus.Missing ||
+                item.ThumbnailStatus ==
+                    ThumbnailStatus.Error)
             {
                 return Task.CompletedTask;
             }
@@ -60,7 +77,8 @@ public class ThumbnailLoader
                     return Task.CompletedTask;
                 }
 
-                queuedPriorities[item] = priority;
+                queuedPriorities[item] =
+                    priority;
             }
             else
             {
@@ -117,7 +135,8 @@ public class ThumbnailLoader
                     continue;
                 }
 
-                if (currentPriority != request.Priority)
+                if (currentPriority !=
+                    request.Priority)
                 {
                     continue;
                 }
@@ -218,7 +237,7 @@ public class ThumbnailLoader
         }
     }
 
-    private static BitmapImage CreateBitmapImage(
+    private BitmapImage CreateBitmapImage(
         byte[] imageData)
     {
         using MemoryStream stream =
@@ -231,6 +250,10 @@ public class ThumbnailLoader
 
         image.CacheOption =
             BitmapCacheOption.OnLoad;
+
+        image.DecodePixelWidth =
+            (int)Math.Round(
+                thumbnailWidth);
 
         image.StreamSource =
             stream;
