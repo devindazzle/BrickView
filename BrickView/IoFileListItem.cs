@@ -32,6 +32,28 @@ public class IoFileListItem : INotifyPropertyChanged
         }
     }
 
+    private ThumbnailStatus thumbnailStatus;
+
+    public ThumbnailStatus ThumbnailStatus
+    {
+        get
+        {
+            return thumbnailStatus;
+        }
+
+        set
+        {
+            if (thumbnailStatus == value)
+            {
+                return;
+            }
+
+            thumbnailStatus = value;
+
+            OnPropertyChanged();
+        }
+    }
+
     private string? errorMessage;
 
     public string? ErrorMessage
@@ -73,6 +95,7 @@ public class IoFileListItem : INotifyPropertyChanged
         FilePath = filePath;
         this.thumbnail = thumbnail;
         this.errorMessage = errorMessage;
+        thumbnailStatus = ThumbnailStatus.NotLoaded;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
