@@ -32,28 +32,6 @@ public class IoFileListItem : INotifyPropertyChanged
         }
     }
 
-    private ThumbnailStatus thumbnailStatus;
-
-    public ThumbnailStatus ThumbnailStatus
-    {
-        get
-        {
-            return thumbnailStatus;
-        }
-
-        set
-        {
-            if (thumbnailStatus == value)
-            {
-                return;
-            }
-
-            thumbnailStatus = value;
-
-            OnPropertyChanged();
-        }
-    }
-
     private string? errorMessage;
 
     public string? ErrorMessage
@@ -82,6 +60,28 @@ public class IoFileListItem : INotifyPropertyChanged
         get
         {
             return ErrorMessage is not null;
+        }
+    }
+
+    private ThumbnailStatus thumbnailStatus;
+
+    public ThumbnailStatus ThumbnailStatus
+    {
+        get
+        {
+            return thumbnailStatus;
+        }
+
+        set
+        {
+            if (thumbnailStatus == value)
+            {
+                return;
+            }
+
+            thumbnailStatus = value;
+
+            OnPropertyChanged();
         }
     }
 
