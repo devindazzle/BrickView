@@ -5,7 +5,9 @@
     xmlns:local="clr-namespace:BrickView"
     Title="BrickView"
     Width="1000"
-    Height="700">
+    Height="700"
+    SnapsToDevicePixels="True"
+    UseLayoutRounding="True">
 
     <Grid Margin="20">
 
@@ -15,7 +17,7 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Select folder and refresh buttons  -->
+        <!--  Buttons  -->
         <StackPanel Grid.Row="0" Orientation="Horizontal">
 
             <Button
@@ -52,6 +54,64 @@
             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
             ScrollViewer.VerticalScrollBarVisibility="Auto">
 
+            <!--  ListBox item container  -->
+            <ListBox.ItemContainerStyle>
+
+                <Style TargetType="ListBoxItem">
+
+                    <Setter Property="Padding" Value="0" />
+
+                    <Setter Property="Margin" Value="0" />
+
+                    <Setter Property="Background" Value="Transparent" />
+
+                    <Setter Property="BorderThickness" Value="0" />
+
+                    <Setter Property="HorizontalContentAlignment" Value="Left" />
+
+                    <Setter Property="VerticalContentAlignment" Value="Top" />
+
+                    <Setter Property="Template">
+
+                        <Setter.Value>
+
+                            <ControlTemplate TargetType="ListBoxItem">
+
+                                <Border
+                                    Padding="{TemplateBinding Padding}"
+                                    Background="{TemplateBinding Background}"
+                                    SnapsToDevicePixels="True">
+
+                                    <ContentPresenter
+                                        HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                        VerticalAlignment="{TemplateBinding VerticalContentAlignment}"
+                                        Content="{TemplateBinding Content}"
+                                        ContentStringFormat="{TemplateBinding ContentStringFormat}"
+                                        ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                                </Border>
+
+                                <ControlTemplate.Triggers>
+
+                                    <Trigger Property="IsSelected" Value="True">
+
+                                        <Setter Property="Background" Value="#D9EDF7" />
+
+                                    </Trigger>
+
+                                </ControlTemplate.Triggers>
+
+                            </ControlTemplate>
+
+                        </Setter.Value>
+
+                    </Setter>
+
+                </Style>
+
+            </ListBox.ItemContainerStyle>
+
+            <!--  Virtualized grid  -->
             <ListBox.ItemsPanel>
 
                 <ItemsPanelTemplate>
@@ -62,6 +122,7 @@
 
             </ListBox.ItemsPanel>
 
+            <!--  Item template  -->
             <ListBox.ItemTemplate>
 
                 <DataTemplate>
