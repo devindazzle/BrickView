@@ -8,7 +8,10 @@ namespace BrickView;
 
 public partial class MainWindow : Window
 {
+    
     private readonly ThumbnailLoader thumbnailLoader;
+
+    private string? currentFolder;
 
 
     public MainWindow()
@@ -38,10 +41,37 @@ public partial class MainWindow : Window
         {
             string folder = dialog.FolderName;
 
+            currentFolder = folder;
+
             FolderText.Text = folder;
 
             await LoadIoFilesAsync(folder);
         }
+    }
+
+
+    private async void RefreshView_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrWhiteSpace(currentFolder))
+        {
+            return;
+        }
+
+        if (!Directory.Exists(currentFolder))
+        {
+            MessageBox.Show(
+                "The selected folder no longer exists.",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            currentFolder = null;
+            FolderText.Text = string.Empty;
+
+            return;
+        }
+
+        await LoadIoFilesAsync(currentFolder);
     }
 
 

@@ -301,31 +301,12 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
     #region Items changed
 
-    protected override void OnItemsChanged(
-        object sender,
-        ItemsChangedEventArgs args)
+    protected override void OnItemsChanged(object sender, ItemsChangedEventArgs args)
     {
-        switch (args.Action)
-        {
-            case System.Collections.Specialized
-                .NotifyCollectionChangedAction.Add:
+        lastReportedFirstVisibleIndex = -1;
+        lastReportedLastVisibleIndex = -1;
 
-            case System.Collections.Specialized
-                .NotifyCollectionChangedAction.Remove:
-
-            case System.Collections.Specialized
-                .NotifyCollectionChangedAction.Replace:
-
-            case System.Collections.Specialized
-                .NotifyCollectionChangedAction.Move:
-
-            case System.Collections.Specialized
-                .NotifyCollectionChangedAction.Reset:
-
-                InvalidateMeasure();
-
-                break;
-        }
+        InvalidateMeasure();
 
         base.OnItemsChanged(
             sender,

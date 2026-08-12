@@ -15,15 +15,25 @@
             <RowDefinition Height="*" />
         </Grid.RowDefinitions>
 
-        <!--  Select folder button  -->
-        <Button
-            x:Name="SelectFolderButton"
-            Grid.Row="0"
-            Width="120"
-            Height="35"
-            HorizontalAlignment="Left"
-            Click="SelectFolder_Click"
-            Content="Select folder" />
+        <!--  Select folder and refresh buttons  -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal">
+
+            <Button
+                x:Name="SelectFolderButton"
+                Width="120"
+                Height="35"
+                Click="SelectFolder_Click"
+                Content="Select folder" />
+
+            <Button
+                x:Name="RefreshViewButton"
+                Width="120"
+                Height="35"
+                Margin="10,0,0,0"
+                Click="RefreshView_Click"
+                Content="Refresh View" />
+
+        </StackPanel>
 
         <!--  Selected folder  -->
         <TextBlock
