@@ -56,21 +56,11 @@ public partial class MainWindow : Window
         {
             string fileName = Path.GetFileNameWithoutExtension(file);
 
-            IoReadResult result = reader.Read(file);
-
-            string? errorMessage = null;
-
-            if (result.Status != IoReadStatus.Success)
-            {
-                errorMessage = result.ErrorMessage
-                    ?? "Ukendt fejl";
-            }
-
             IoFileListItem item = new IoFileListItem(
                 fileName,
                 file,
                 null,
-                errorMessage);
+                null);
 
             items.Add(item);
 
