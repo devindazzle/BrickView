@@ -7,8 +7,6 @@ public class ThumbnailLoader
 {
     private const int WorkerCount = 4;
 
-    private readonly double thumbnailWidth;
-
     private readonly ThumbnailSizeManager thumbnailSizeManager;
 
     private readonly object queueLock = new();
@@ -43,9 +41,6 @@ public class ThumbnailLoader
 
         thumbnailSizeManager =
             ThumbnailSizeManager.Instance;
-
-        this.thumbnailWidth =
-            thumbnailSizeManager.Current.ThumbnailWidth;
 
         for (int i = 0;
              i < WorkerCount;
@@ -254,6 +249,9 @@ public class ThumbnailLoader
 
         image.CacheOption =
             BitmapCacheOption.OnLoad;
+
+        double thumbnailWidth =
+            thumbnailSizeManager.Current.ThumbnailWidth;
 
         image.DecodePixelWidth =
             (int)Math.Round(

@@ -163,6 +163,14 @@ public partial class MainWindow : Window
     {
         ApplyThumbnailSize(
             newSize);
+
+        foreach (IoFileListItem item
+                 in allFileItems)
+        {
+            item.InvalidateThumbnail();
+        }
+
+        FileList.InvalidateMeasure();
     }
 
     private void ApplyThumbnailSize(
