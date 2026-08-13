@@ -7,9 +7,11 @@ namespace BrickView;
 
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
-    private const double ItemWidth = 378;
+    private readonly ThumbnailSizeManager thumbnailSizeManager;
 
-    private const double ItemHeight = 310;
+    private double itemWidth;
+
+    private double itemHeight;
 
     private Size extent = new Size(0, 0);
 
@@ -33,6 +35,21 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             RoutingStrategy.Bubble,
             typeof(RoutedEventHandler),
             typeof(VirtualizingWrapPanel));
+
+    public VirtualizingWrapPanel()
+    {
+        thumbnailSizeManager =
+            ThumbnailSizeManager.Instance;
+
+        itemWidth =
+            thumbnailSizeManager.Current.ItemWidth;
+
+        itemHeight =
+            thumbnailSizeManager.Current.ItemHeight;
+
+        thumbnailSizeManager.SizeChanged +=
+            ThumbnailSizeManager_SizeChanged;
+    }
 
     public event RoutedEventHandler ViewportChanged
     {
@@ -97,7 +114,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
             availableWidth <= 0)
         {
             availableWidth =
-                ItemWidth;
+                itemWidth;
         }
 
         columnCount =
@@ -105,7 +122,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                 1,
                 (int)Math.Floor(
                     availableWidth /
-                    ItemWidth));
+                    itemWidth));
 
         int rowCount =
             (int)Math.Ceiling(
@@ -114,7 +131,7 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
         double extentHeight =
             rowCount *
-            ItemHeight;
+            itemHeight;
 
         viewport =
             availableSize;
@@ -175,19 +192,19 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
             double x =
                 column *
-                ItemWidth;
+                itemWidth;
 
             double y =
                 row *
-                ItemHeight -
+                itemHeight -
                 verticalOffset;
 
             child.Arrange(
                 new Rect(
                     x,
                     y,
-                    ItemWidth,
-                    ItemHeight));
+                    itemWidth,
+                    itemHeight));
         }
 
         return finalSize;
@@ -211,13 +228,13 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                 0,
                 (int)Math.Floor(
                     verticalOffset /
-                    ItemHeight));
+                    itemHeight));
 
         int lastVisibleRow =
             Math.Min(
                 (int)Math.Ceiling(
                     viewportBottom /
-                    ItemHeight),
+                    itemHeight),
                 (int)Math.Ceiling(
                     (double)itemCount /
                     columnCount) -
@@ -289,8 +306,8 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 
                 child.Measure(
                     new Size(
-                        ItemWidth,
-                        ItemHeight));
+                        itemWidth,
+                        itemHeight));
 
                 childIndex++;
             }
@@ -357,6 +374,26 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
                     1);
             }
         }
+    }
+
+    private void ThumbnailSizeManager_SizeChanged(
+        ThumbnailSizeDefinition newSize)
+    {
+        itemWidth =
+            newSize.ItemWidth;
+
+        itemHeight =
+            newSize.ItemHeight;
+
+        lastReportedFirstVisibleIndex =
+            -1;
+
+        lastReportedLastVisibleIndex =
+            -1;
+
+        InvalidateMeasure();
+
+        scrollOwner?.InvalidateScrollInfo();
     }
 
     protected override void OnItemsChanged(
@@ -453,56 +490,56 @@ public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
     {
         SetVerticalOffset(
             verticalOffset +
-            ItemHeight);
+            itemHeight);
     }
 
     public void LineUp()
     {
         SetVerticalOffset(
             verticalOffset -
-            ItemHeight);
+            itemHeight);
     }
 
     public void LineLeft()
     {
         SetHorizontalOffset(
             horizontalOffset -
-            ItemWidth);
+            itemWidth);
     }
 
     public void LineRight()
     {
         SetHorizontalOffset(
             horizontalOffset +
-            ItemWidth);
+            itemWidth);
     }
 
     public void MouseWheelDown()
     {
         SetVerticalOffset(
             verticalOffset +
-            ItemHeight);
+            itemHeight);
     }
 
     public void MouseWheelUp()
     {
         SetVerticalOffset(
             verticalOffset -
-            ItemHeight);
+            itemHeight);
     }
 
     public void MouseWheelLeft()
     {
         SetHorizontalOffset(
             horizontalOffset -
-            ItemWidth);
+            itemWidth);
     }
 
     public void MouseWheelRight()
     {
         SetHorizontalOffset(
             horizontalOffset +
-            ItemWidth);
+            itemWidth);
     }
 
     public void PageDown()

@@ -8,11 +8,45 @@ namespace BrickView;
 
 public partial class MainWindow : Window
 {
+    public static readonly DependencyProperty ThumbnailWidthProperty =
+        DependencyProperty.Register(
+            nameof(ThumbnailWidth),
+            typeof(double),
+            typeof(MainWindow),
+            new PropertyMetadata(
+                ThumbnailSizes.Medium.ThumbnailWidth));
+
+    public static readonly DependencyProperty ThumbnailHeightProperty =
+        DependencyProperty.Register(
+            nameof(ThumbnailHeight),
+            typeof(double),
+            typeof(MainWindow),
+            new PropertyMetadata(
+                ThumbnailSizes.Medium.ThumbnailHeight));
+
+    public static readonly DependencyProperty CardWidthProperty =
+        DependencyProperty.Register(
+            nameof(CardWidth),
+            typeof(double),
+            typeof(MainWindow),
+            new PropertyMetadata(
+                ThumbnailSizes.Medium.CardWidth));
+
+    public static readonly DependencyProperty CardHeightProperty =
+        DependencyProperty.Register(
+            nameof(CardHeight),
+            typeof(double),
+            typeof(MainWindow),
+            new PropertyMetadata(
+                ThumbnailSizes.Medium.CardHeight));
+
     private readonly ThumbnailLoader thumbnailLoader;
 
     private readonly FolderDiffService folderDiffService;
 
     private readonly IoFolderWatcher folderWatcher;
+
+    private readonly ThumbnailSizeManager thumbnailSizeManager;
 
     private readonly List<IoFileListItem> allFileItems;
 
@@ -23,6 +57,15 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        thumbnailSizeManager =
+            ThumbnailSizeManager.Instance;
+
+        thumbnailSizeManager.SizeChanged +=
+            ThumbnailSizeManager_SizeChanged;
+
+        ApplyThumbnailSize(
+            thumbnailSizeManager.Current);
 
         thumbnailLoader =
             new ThumbnailLoader(360);
@@ -49,6 +92,147 @@ public partial class MainWindow : Window
 
         SearchTextBox.PreviewKeyDown +=
             SearchTextBox_PreviewKeyDown;
+    }
+
+    public double ThumbnailWidth
+    {
+        get
+        {
+            return (double)GetValue(
+                ThumbnailWidthProperty);
+        }
+
+        private set
+        {
+            SetValue(
+                ThumbnailWidthProperty,
+                value);
+        }
+    }
+
+    public double ThumbnailHeight
+    {
+        get
+        {
+            return (double)GetValue(
+                ThumbnailHeightProperty);
+        }
+
+        private set
+        {
+            SetValue(
+                ThumbnailHeightProperty,
+                value);
+        }
+    }
+
+    public double CardWidth
+    {
+        get
+        {
+            return (double)GetValue(
+                CardWidthProperty);
+        }
+
+        private set
+        {
+            SetValue(
+                CardWidthProperty,
+                value);
+        }
+    }
+
+    public double CardHeight
+    {
+        get
+        {
+            return (double)GetValue(
+                CardHeightProperty);
+        }
+
+        private set
+        {
+            SetValue(
+                CardHeightProperty,
+                value);
+        }
+    }
+
+    private void ThumbnailSizeManager_SizeChanged(
+        ThumbnailSizeDefinition newSize)
+    {
+        ApplyThumbnailSize(
+            newSize);
+    }
+
+    private void ApplyThumbnailSize(
+        ThumbnailSizeDefinition size)
+    {
+        ThumbnailWidth =
+            size.ThumbnailWidth;
+
+        ThumbnailHeight =
+            size.ThumbnailHeight;
+
+        CardWidth =
+            size.CardWidth;
+
+        CardHeight =
+            size.CardHeight;
+    }
+
+    private void ThumbnailSizeSelector_Checked(
+        object sender,
+        RoutedEventArgs e)
+    {
+        if (sender is not System.Windows.Controls.RadioButton radioButton)
+        {
+            return;
+        }
+
+        if (radioButton.Tag is not string presetName)
+        {
+            return;
+        }
+
+        ThumbnailSizePreset preset;
+
+        switch (presetName)
+        {
+            case "Small":
+
+                preset =
+                    ThumbnailSizePreset.Small;
+
+                break;
+
+            case "Medium":
+
+                preset =
+                    ThumbnailSizePreset.Medium;
+
+                break;
+
+            case "Large":
+
+                preset =
+                    ThumbnailSizePreset.Large;
+
+                break;
+
+            default:
+
+                return;
+        }
+
+        if (thumbnailSizeManager.Current.Preset ==
+            preset)
+        {
+            return;
+        }
+
+        thumbnailSizeManager.SetSize(
+            preset);
     }
 
     private async void SelectFolder_Click(
@@ -564,6 +748,9 @@ public partial class MainWindow : Window
         folderRefreshCancellation?.Cancel();
 
         folderRefreshCancellation?.Dispose();
+
+        thumbnailSizeManager.SizeChanged -=
+            ThumbnailSizeManager_SizeChanged;
 
         folderWatcher.Dispose();
 

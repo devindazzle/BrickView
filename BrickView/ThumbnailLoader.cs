@@ -1,5 +1,4 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿using System.IO;
 using System.Windows.Media.Imaging;
 
 namespace BrickView;
@@ -9,6 +8,8 @@ public class ThumbnailLoader
     private const int WorkerCount = 4;
 
     private readonly double thumbnailWidth;
+
+    private readonly ThumbnailSizeManager thumbnailSizeManager;
 
     private readonly object queueLock = new();
 
@@ -40,8 +41,11 @@ public class ThumbnailLoader
                 nameof(thumbnailWidth));
         }
 
+        thumbnailSizeManager =
+            ThumbnailSizeManager.Instance;
+
         this.thumbnailWidth =
-            thumbnailWidth;
+            thumbnailSizeManager.Current.ThumbnailWidth;
 
         for (int i = 0;
              i < WorkerCount;

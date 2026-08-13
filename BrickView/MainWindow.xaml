@@ -209,6 +209,94 @@
         </Style>
 
         <!--  =====================================================  -->
+        <!--  Thumbnail size selector  -->
+        <!--  =====================================================  -->
+
+        <Style x:Key="ThumbnailSizeSelectorStyle" TargetType="RadioButton">
+
+            <Setter Property="Height" Value="28" />
+
+            <Setter Property="Padding" Value="13,0" />
+
+            <Setter Property="FontSize" Value="12" />
+
+            <Setter Property="FontWeight" Value="SemiBold" />
+
+            <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
+
+            <Setter Property="Background" Value="Transparent" />
+
+            <Setter Property="BorderBrush" Value="#4A4D52" />
+
+            <Setter Property="BorderThickness" Value="0,0,1,0" />
+
+            <Setter Property="Cursor" Value="Hand" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="RadioButton">
+
+                        <Border
+                            x:Name="SelectorBorder"
+                            Padding="{TemplateBinding Padding}"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}">
+
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="SelectorBorder" Property="Background" Value="#414449" />
+
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+
+                                <Setter TargetName="SelectorBorder" Property="Background" Value="{StaticResource CardSelectedBrush}" />
+
+                                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsEnabled" Value="False">
+
+                                <Setter TargetName="SelectorBorder" Property="Opacity" Value="0.5" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+        <Style
+            x:Key="ThumbnailSizeSelectorLastStyle"
+            BasedOn="{StaticResource ThumbnailSizeSelectorStyle}"
+            TargetType="RadioButton">
+
+            <Setter Property="BorderThickness" Value="0" />
+
+        </Style>
+
+        <!--  =====================================================  -->
         <!--  ListBox item  -->
         <!--  =====================================================  -->
 
@@ -468,7 +556,7 @@
         </Border>
 
         <!--  =====================================================  -->
-        <!--  Search / future secondary toolbar  -->
+        <!--  Search / size selector toolbar  -->
         <!--  =====================================================  -->
 
         <Border
@@ -478,11 +566,98 @@
             BorderBrush="#34363C"
             BorderThickness="0,0,0,1">
 
-            <TextBox
-                x:Name="SearchTextBox"
-                Width="360"
-                HorizontalAlignment="Left"
-                Style="{StaticResource SearchTextBoxStyle}" />
+            <Grid>
+
+                <Grid.ColumnDefinitions>
+
+                    <ColumnDefinition Width="*" />
+
+                    <ColumnDefinition Width="Auto" />
+
+                </Grid.ColumnDefinitions>
+
+                <TextBox
+                    x:Name="SearchTextBox"
+                    Width="360"
+                    HorizontalAlignment="Left"
+                    Style="{StaticResource SearchTextBoxStyle}" />
+
+                <Border
+                    Grid.Column="1"
+                    Height="30"
+                    Padding="1"
+                    VerticalAlignment="Center"
+                    Background="#34363A"
+                    BorderBrush="#4A4D52"
+                    BorderThickness="1"
+                    ClipToBounds="True"
+                    CornerRadius="4">
+
+                    <StackPanel Orientation="Horizontal">
+
+                        <RadioButton
+                            Width="68"
+                            Checked="ThumbnailSizeSelector_Checked"
+                            GroupName="ThumbnailSize"
+                            Style="{StaticResource ThumbnailSizeSelectorStyle}"
+                            Tag="Small"
+                            ToolTip="Small">
+
+                            <Path
+                                Width="8"
+                                Height="8"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M 0,0 H 1 V 1 H 0 Z"
+                                Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                Stretch="Fill" />
+
+                        </RadioButton>
+
+                        <RadioButton
+                            Width="78"
+                            Checked="ThumbnailSizeSelector_Checked"
+                            GroupName="ThumbnailSize"
+                            IsChecked="True"
+                            Style="{StaticResource ThumbnailSizeSelectorStyle}"
+                            Tag="Medium"
+                            ToolTip="Medium">
+
+                            <Path
+                                Width="12"
+                                Height="12"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M 0,0 H 1 V 1 H 0 Z"
+                                Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                Stretch="Fill" />
+
+                        </RadioButton>
+
+                        <RadioButton
+                            Width="68"
+                            Checked="ThumbnailSizeSelector_Checked"
+                            GroupName="ThumbnailSize"
+                            Style="{StaticResource ThumbnailSizeSelectorLastStyle}"
+                            Tag="Large"
+                            ToolTip="Large">
+
+                            <Path
+                                Width="16"
+                                Height="16"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Data="M 0,0 H 1 V 1 H 0 Z"
+                                Fill="{Binding Foreground, RelativeSource={RelativeSource AncestorType={x:Type RadioButton}}}"
+                                Stretch="Fill" />
+
+                        </RadioButton>
+
+                    </StackPanel>
+
+                </Border>
+
+            </Grid>
 
         </Border>
 
@@ -520,16 +695,16 @@
                         <DataTemplate>
 
                             <StackPanel
-                                Width="360"
-                                Height="290"
+                                Width="{Binding CardWidth, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                Height="{Binding CardHeight, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                 Margin="0">
 
                                 <!--  Thumbnail  -->
 
                                 <Border
                                     x:Name="ThumbnailBorder"
-                                    Width="360"
-                                    Height="240"
+                                    Width="{Binding ThumbnailWidth, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
+                                    Height="{Binding ThumbnailHeight, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                     Background="{StaticResource ThumbnailBackgroundBrush}"
                                     BorderBrush="{StaticResource CardBorderBrush}"
                                     BorderThickness="1"
@@ -690,7 +865,10 @@
 
                                         <!--  Hover overlay  -->
 
-                                        <Border Background="{StaticResource ThumbnailOverlayBrush}" IsHitTestVisible="False">
+                                        <Border
+                                            Background="{StaticResource ThumbnailOverlayBrush}"
+                                            CornerRadius="6"
+                                            IsHitTestVisible="False">
 
                                             <Border.Style>
 
