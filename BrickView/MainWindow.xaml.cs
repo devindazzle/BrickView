@@ -48,6 +48,8 @@ public partial class MainWindow : Window
 
     private readonly ThumbnailSizeManager thumbnailSizeManager;
 
+    private readonly IoFileReader ioFileReader;
+
     private readonly List<IoFileListItem> allFileItems;
 
     private string? currentFolder;
@@ -75,6 +77,9 @@ public partial class MainWindow : Window
 
         folderWatcher =
             new IoFolderWatcher();
+
+        ioFileReader =
+            new IoFileReader();
 
         allFileItems =
             new List<IoFileListItem>();
@@ -448,6 +453,10 @@ public partial class MainWindow : Window
                 null,
                 null);
 
+        item.Metadata =
+            ioFileReader.ReadMetadata(
+                filePath);
+
         allFileItems.Add(
             item);
     }
@@ -498,11 +507,10 @@ public partial class MainWindow : Window
             new FileInfo(
                 filePath);
 
-        item.UpdateFileInfo(
-            fileInfo.Length,
-            fileInfo.LastWriteTimeUtc);
-
+        item.UpdateFileInfo(fileInfo.Length, fileInfo.LastWriteTimeUtc);
         item.InvalidateThumbnail();
+        item.InvalidateMetadata();
+        item.Metadata = ioFileReader.ReadMetadata(filePath);
     }
 
     private void SortAllFileItems()

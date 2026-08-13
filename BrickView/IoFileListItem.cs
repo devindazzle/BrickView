@@ -14,6 +14,28 @@ public class IoFileListItem : INotifyPropertyChanged
 
     public DateTime LastWriteTimeUtc { get; private set; }
 
+    private IoModelMetadata? metadata;
+
+    public IoModelMetadata? Metadata
+    {
+        get
+        {
+            return metadata;
+        }
+
+        set
+        {
+            if (metadata == value)
+            {
+                return;
+            }
+
+            metadata = value;
+
+            OnPropertyChanged();
+        }
+    }
+
     private BitmapImage? thumbnail;
 
     public BitmapImage? Thumbnail
@@ -148,6 +170,7 @@ public class IoFileListItem : INotifyPropertyChanged
         LastWriteTimeUtc = lastWriteTimeUtc;
         this.thumbnail = thumbnail;
         this.errorMessage = errorMessage;
+        metadata = null;
         thumbnailStatus = ThumbnailStatus.NotLoaded;
     }
 
@@ -164,6 +187,11 @@ public class IoFileListItem : INotifyPropertyChanged
         Thumbnail = null;
         ErrorMessage = null;
         ThumbnailStatus = ThumbnailStatus.NotLoaded;
+    }
+
+    public void InvalidateMetadata()
+    {
+        Metadata = null;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;
