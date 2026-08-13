@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Specialized;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Media;
@@ -9,7 +7,7 @@ namespace BrickView;
 
 public class VirtualizingWrapPanel : VirtualizingPanel, IScrollInfo
 {
-    private const double ItemWidth = 379;
+    private const double ItemWidth = 378;
 
     private const double ItemHeight = 310;
 

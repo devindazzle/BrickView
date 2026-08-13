@@ -8,8 +8,8 @@
     Height="750"
     MinWidth="800"
     MinHeight="550"
-    Background="#2A2D34"
-    Foreground="#F1F3F4"
+    Background="#24252E"
+    Foreground="#F3F3F3"
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
 
@@ -19,7 +19,7 @@
         <!--  Studio-inspired colour palette  -->
         <!--  =====================================================  -->
 
-        <SolidColorBrush x:Key="OuterBackgroundBrush" Color="#2A2D34" />
+        <SolidColorBrush x:Key="OuterBackgroundBrush" Color="#24252E" />
 
         <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#24252E" />
 
@@ -27,15 +27,15 @@
 
         <SolidColorBrush x:Key="CardBackgroundBrush" Color="#24252E" />
 
-        <SolidColorBrush x:Key="CardBorderBrush" Color="#343640" />
+        <SolidColorBrush x:Key="CardBorderBrush" Color="#303138" />
 
         <SolidColorBrush x:Key="CardSelectedBrush" Color="#394D5F" />
 
-        <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#24252E" />
+        <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#18191D" />
 
-        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F1F3F4" />
+        <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F3F3F3" />
 
-        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#92949D" />
+        <SolidColorBrush x:Key="SecondaryTextBrush" Color="#77777A" />
 
         <SolidColorBrush x:Key="ErrorTextBrush" Color="#FF7B7B" />
 
@@ -139,9 +139,9 @@
 
             <Setter Property="BorderThickness" Value="0" />
 
-            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="HorizontalContentAlignment" Value="Center" />
 
-            <Setter Property="VerticalContentAlignment" Value="Top" />
+            <Setter Property="VerticalContentAlignment" Value="Center" />
 
             <Setter Property="Template">
 
@@ -149,14 +149,13 @@
 
                     <ControlTemplate TargetType="ListBoxItem">
 
-                        <Border
-                            x:Name="ItemBorder"
-                            Padding="0"
-                            Background="{TemplateBinding Background}"
-                            BorderBrush="Transparent"
-                            BorderThickness="1"
-                            CornerRadius="5"
-                            SnapsToDevicePixels="True">
+                        <Grid>
+
+                            <Border
+                                x:Name="ItemBackground"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="5"
+                                SnapsToDevicePixels="True" />
 
                             <ContentPresenter
                                 HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
@@ -165,15 +164,24 @@
                                 ContentStringFormat="{TemplateBinding ContentStringFormat}"
                                 ContentTemplate="{TemplateBinding ContentTemplate}" />
 
-                        </Border>
+                            <Border
+                                x:Name="SelectionBorder"
+                                Background="Transparent"
+                                BorderBrush="Transparent"
+                                BorderThickness="1"
+                                CornerRadius="5"
+                                IsHitTestVisible="False"
+                                SnapsToDevicePixels="True" />
+
+                        </Grid>
 
                         <ControlTemplate.Triggers>
 
                             <Trigger Property="IsSelected" Value="True">
 
-                                <Setter TargetName="ItemBorder" Property="Background" Value="{StaticResource CardSelectedBrush}" />
+                                <Setter TargetName="ItemBackground" Property="Background" Value="{StaticResource CardSelectedBrush}" />
 
-                                <Setter TargetName="ItemBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+                                <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
 
                             </Trigger>
 
@@ -333,8 +341,6 @@
 
                 </Grid.ColumnDefinitions>
 
-                <!--  Application name  -->
-
                 <TextBlock
                     Grid.Column="0"
                     VerticalAlignment="Center"
@@ -346,15 +352,14 @@
                 <!--  Current folder  -->
 
                 <TextBlock
+                    x:Name="FolderText"
                     Grid.Column="1"
                     Margin="24,0"
                     VerticalAlignment="Center"
                     FontSize="13"
                     Foreground="{StaticResource SecondaryTextBrush}"
-                    Text="{Binding ElementName=FolderText, Path=Text}"
-                    TextTrimming="CharacterEllipsis" />
-
-                <!--  Toolbar buttons  -->
+                    TextTrimming="CharacterEllipsis"
+                    ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal">
 
@@ -380,7 +385,7 @@
         </Border>
 
         <!--  =====================================================  -->
-        <!--  Folder information  -->
+        <!--  Future secondary toolbar / information bar  -->
         <!--  =====================================================  -->
 
         <Border
@@ -388,16 +393,7 @@
             Padding="16,10"
             Background="{StaticResource OuterBackgroundBrush}"
             BorderBrush="#34363C"
-            BorderThickness="0,0,0,1">
-
-            <TextBlock
-                x:Name="FolderText"
-                FontSize="12"
-                Foreground="{StaticResource SecondaryTextBrush}"
-                TextTrimming="CharacterEllipsis"
-                ToolTip="{Binding Text, RelativeSource={RelativeSource Self}}" />
-
-        </Border>
+            BorderThickness="0,0,0,1" />
 
         <!--  =====================================================  -->
         <!--  Thumbnail area  -->
@@ -407,6 +403,7 @@
 
             <ListBox
                 x:Name="FileList"
+                Padding="9"
                 HorizontalContentAlignment="Stretch"
                 Background="Transparent"
                 BorderThickness="0"
@@ -414,8 +411,6 @@
                 ScrollViewer.CanContentScroll="True"
                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                 ScrollViewer.VerticalScrollBarVisibility="Auto">
-
-                <!--  Virtualized grid  -->
 
                 <ListBox.ItemsPanel>
 
@@ -427,8 +422,6 @@
 
                 </ListBox.ItemsPanel>
 
-                <!--  MOC card  -->
-
                 <ListBox.ItemTemplate>
 
                     <DataTemplate>
@@ -436,7 +429,7 @@
                         <StackPanel
                             Width="360"
                             Height="290"
-                            Margin="9,10">
+                            Margin="0">
 
                             <!--  Thumbnail  -->
 
@@ -447,13 +440,12 @@
                                 Background="{StaticResource ThumbnailBackgroundBrush}"
                                 BorderBrush="{StaticResource CardBorderBrush}"
                                 BorderThickness="1"
+                                CornerRadius="6"
                                 Cursor="Hand"
                                 MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"
                                 SnapsToDevicePixels="True">
 
-                                <Grid>
-
-                                    <!--  Thumbnail  -->
+                                <Grid ClipToBounds="True">
 
                                     <Image
                                         Margin="5"
@@ -603,7 +595,7 @@
 
                                     </TextBlock>
 
-                                    <!--  Studio-style hover overlay  -->
+                                    <!--  Hover overlay  -->
 
                                     <Border Background="{StaticResource ThumbnailOverlayBrush}" IsHitTestVisible="False">
 
@@ -646,8 +638,8 @@
                                                 Height="38"
                                                 HorizontalAlignment="Center"
                                                 VerticalAlignment="Center"
-                                                Background="#3A3C40"
-                                                BorderBrush="#777B82"
+                                                Background="#3D3F45"
+                                                BorderBrush="#77777A"
                                                 BorderThickness="1"
                                                 CornerRadius="4">
 
@@ -656,7 +648,7 @@
                                                     VerticalAlignment="Center"
                                                     FontSize="14"
                                                     FontWeight="SemiBold"
-                                                    Foreground="White"
+                                                    Foreground="#FFFFFF"
                                                     Text="Open file" />
 
                                             </Border>
@@ -680,11 +672,12 @@
                                 TextTrimming="CharacterEllipsis"
                                 ToolTip="{Binding FilePath}" />
 
-                            <!--  Parts count placeholder  -->
+                            <!--  Parts count  -->
 
                             <TextBlock
                                 Margin="2,3,2,0"
                                 FontSize="11"
+                                FontWeight="SemiBold"
                                 Foreground="{StaticResource SecondaryTextBrush}"
                                 Text="" />
 
