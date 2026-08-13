@@ -126,6 +126,89 @@
         </Style>
 
         <!--  =====================================================  -->
+        <!--  Search box  -->
+        <!--  =====================================================  -->
+
+        <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
+
+            <Setter Property="Height" Value="30" />
+
+            <Setter Property="Background" Value="#18191D" />
+
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+
+            <Setter Property="BorderBrush" Value="#303138" />
+
+            <Setter Property="BorderThickness" Value="1" />
+
+            <Setter Property="Padding" Value="12,0" />
+
+            <Setter Property="FontSize" Value="13" />
+
+            <Setter Property="VerticalContentAlignment" Value="Center" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="TextBox">
+
+                        <Border
+                            x:Name="SearchBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="15"
+                            SnapsToDevicePixels="True">
+
+                            <Grid>
+
+                                <ScrollViewer
+                                    x:Name="PART_ContentHost"
+                                    Margin="12,0"
+                                    HorizontalAlignment="Stretch"
+                                    VerticalAlignment="Center" />
+
+                                <TextBlock
+                                    x:Name="SearchPlaceholder"
+                                    Margin="14,0"
+                                    VerticalAlignment="Center"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    IsHitTestVisible="False"
+                                    Text="Search models..."
+                                    Visibility="Collapsed" />
+
+                            </Grid>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="Text" Value="">
+
+                                <Setter TargetName="SearchPlaceholder" Property="Visibility" Value="Visible" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsKeyboardFocusWithin" Value="True">
+
+                                <Setter TargetName="SearchPlaceholder" Property="Visibility" Value="Collapsed" />
+
+                                <Setter TargetName="SearchBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+        <!--  =====================================================  -->
         <!--  ListBox item  -->
         <!--  =====================================================  -->
 
@@ -385,15 +468,23 @@
         </Border>
 
         <!--  =====================================================  -->
-        <!--  Future secondary toolbar / information bar  -->
+        <!--  Search / future secondary toolbar  -->
         <!--  =====================================================  -->
 
         <Border
             Grid.Row="1"
-            Padding="16,10"
+            Padding="9"
             Background="{StaticResource OuterBackgroundBrush}"
             BorderBrush="#34363C"
-            BorderThickness="0,0,0,1" />
+            BorderThickness="0,0,0,1">
+
+            <TextBox
+                x:Name="SearchTextBox"
+                Width="360"
+                HorizontalAlignment="Left"
+                Style="{StaticResource SearchTextBoxStyle}" />
+
+        </Border>
 
         <!--  =====================================================  -->
         <!--  Thumbnail area  -->

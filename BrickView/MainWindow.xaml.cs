@@ -1,11 +1,6 @@
 ﻿using Microsoft.Win32;
-using System;
-using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 
@@ -18,6 +13,8 @@ public partial class MainWindow : Window
     private readonly FolderDiffService folderDiffService;
 
     private readonly IoFolderWatcher folderWatcher;
+
+    private readonly List<IoFileListItem> allFileItems;
 
     private string? currentFolder;
 
@@ -36,6 +33,9 @@ public partial class MainWindow : Window
         folderWatcher =
             new IoFolderWatcher();
 
+        allFileItems =
+            new List<IoFileListItem>();
+
         folderWatcher.FolderChanged +=
             FolderWatcher_FolderChanged;
 
@@ -43,6 +43,9 @@ public partial class MainWindow : Window
             VirtualizingWrapPanel.ViewportChangedEvent,
             new RoutedEventHandler(
                 FileList_ViewportChanged));
+
+        SearchTextBox.TextChanged +=
+            SearchTextBox_TextChanged;
     }
 
     private async void SelectFolder_Click(
@@ -94,6 +97,8 @@ public partial class MainWindow : Window
     private async Task LoadIoFilesAsync(
         string folder)
     {
+        allFileItems.Clear();
+
         FileList.Items.Clear();
 
         string[] files =
@@ -111,6 +116,10 @@ public partial class MainWindow : Window
             AddFileListItem(
                 file);
         }
+
+        SortAllFileItems();
+
+        ApplySearchFilter();
 
         await Task.CompletedTask;
     }
@@ -136,6 +145,10 @@ public partial class MainWindow : Window
 
             folderWatcher.Stop();
 
+            allFileItems.Clear();
+
+            FileList.Items.Clear();
+
             FolderText.Text =
                 string.Empty;
 
@@ -153,9 +166,7 @@ public partial class MainWindow : Window
                 .ToArray();
 
         List<IoFileListItem> existingItems =
-            FileList.Items
-                .OfType<IoFileListItem>()
-                .ToList();
+            allFileItems.ToList();
 
         FolderDiff diff =
             folderDiffService.Compare(
@@ -194,7 +205,9 @@ public partial class MainWindow : Window
             }
         }
 
-        SortFileList();
+        SortAllFileItems();
+
+        ApplySearchFilter();
 
         await Task.CompletedTask;
     }
@@ -225,7 +238,7 @@ public partial class MainWindow : Window
                 null,
                 null);
 
-        FileList.Items.Add(
+        allFileItems.Add(
             item);
     }
 
@@ -233,8 +246,7 @@ public partial class MainWindow : Window
         string filePath)
     {
         IoFileListItem? item =
-            FileList.Items
-                .OfType<IoFileListItem>()
+            allFileItems
                 .FirstOrDefault(
                     existingItem =>
                         string.Equals(
@@ -244,7 +256,7 @@ public partial class MainWindow : Window
 
         if (item is not null)
         {
-            FileList.Items.Remove(
+            allFileItems.Remove(
                 item);
         }
     }
@@ -253,8 +265,7 @@ public partial class MainWindow : Window
         string filePath)
     {
         IoFileListItem? item =
-            FileList.Items
-                .OfType<IoFileListItem>()
+            allFileItems
                 .FirstOrDefault(
                     existingItem =>
                         string.Equals(
@@ -284,24 +295,54 @@ public partial class MainWindow : Window
         item.InvalidateThumbnail();
     }
 
-    private void SortFileList()
+    private void SortAllFileItems()
     {
-        List<IoFileListItem> sortedItems =
-            FileList.Items
-                .OfType<IoFileListItem>()
-                .OrderBy(
-                    item => item.FileName,
-                    StringComparer.OrdinalIgnoreCase)
-                .ToList();
+        allFileItems.Sort(
+            (
+                left,
+                right) =>
+                StringComparer.OrdinalIgnoreCase.Compare(
+                    left.FileName,
+                    right.FileName));
+    }
+
+    private void ApplySearchFilter()
+    {
+        string searchText =
+            SearchTextBox.Text.Trim();
+
+        IEnumerable<IoFileListItem> filteredItems =
+            allFileItems;
+
+        if (!string.IsNullOrEmpty(
+                searchText))
+        {
+            filteredItems =
+                allFileItems.Where(
+                    item =>
+                        item.FileName.Contains(
+                            searchText,
+                            StringComparison.OrdinalIgnoreCase));
+        }
+
+        List<IoFileListItem> visibleItems =
+            filteredItems.ToList();
 
         FileList.Items.Clear();
 
         foreach (IoFileListItem item
-                 in sortedItems)
+                 in visibleItems)
         {
             FileList.Items.Add(
                 item);
         }
+    }
+
+    private void SearchTextBox_TextChanged(
+        object sender,
+        System.Windows.Controls.TextChangedEventArgs e)
+    {
+        ApplySearchFilter();
     }
 
     private void FileList_ViewportChanged(
