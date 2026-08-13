@@ -46,6 +46,9 @@ public partial class MainWindow : Window
 
         SearchTextBox.TextChanged +=
             SearchTextBox_TextChanged;
+
+        SearchTextBox.PreviewKeyDown +=
+            SearchTextBox_PreviewKeyDown;
     }
 
     private async void SelectFolder_Click(
@@ -101,6 +104,9 @@ public partial class MainWindow : Window
 
         FileList.Items.Clear();
 
+        NoResultsText.Visibility =
+            Visibility.Collapsed;
+
         string[] files =
             Directory.GetFiles(
                 folder,
@@ -148,6 +154,9 @@ public partial class MainWindow : Window
             allFileItems.Clear();
 
             FileList.Items.Clear();
+
+            NoResultsText.Visibility =
+                Visibility.Collapsed;
 
             FolderText.Text =
                 string.Empty;
@@ -336,6 +345,18 @@ public partial class MainWindow : Window
             FileList.Items.Add(
                 item);
         }
+
+        if (!string.IsNullOrEmpty(searchText)
+            && visibleItems.Count == 0)
+        {
+            NoResultsText.Visibility =
+                Visibility.Visible;
+        }
+        else
+        {
+            NoResultsText.Visibility =
+                Visibility.Collapsed;
+        }
     }
 
     private void SearchTextBox_TextChanged(
@@ -343,6 +364,22 @@ public partial class MainWindow : Window
         System.Windows.Controls.TextChangedEventArgs e)
     {
         ApplySearchFilter();
+    }
+
+    private void SearchTextBox_PreviewKeyDown(
+        object sender,
+        KeyEventArgs e)
+    {
+        if (e.Key != Key.Escape)
+        {
+            return;
+        }
+
+        SearchTextBox.Clear();
+
+        SearchTextBox.Focus();
+
+        e.Handled = true;
     }
 
     private void FileList_ViewportChanged(
