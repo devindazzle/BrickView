@@ -801,6 +801,16 @@
                     Text="No models found"
                     Visibility="Collapsed" />
 
+                <TextBlock
+                    x:Name="NoFolderSelectedText"
+                    HorizontalAlignment="Center"
+                    VerticalAlignment="Center"
+                    FontSize="16"
+                    Foreground="{StaticResource SecondaryTextBrush}"
+                    IsHitTestVisible="False"
+                    Text="No folder selected"
+                    Visibility="Visible" />
+
             </Grid>
 
         </Border>

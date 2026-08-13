@@ -80,6 +80,9 @@ public partial class MainWindow : Window
         currentFolder =
             folder;
 
+        NoFolderSelectedText.Visibility =
+            Visibility.Collapsed;
+
         folderWatcher.Start(
             folder);
 
@@ -158,11 +161,17 @@ public partial class MainWindow : Window
             NoResultsText.Visibility =
                 Visibility.Collapsed;
 
+            NoFolderSelectedText.Visibility =
+                Visibility.Visible;
+
             FolderText.Text =
                 string.Empty;
 
             return;
         }
+
+        NoFolderSelectedText.Visibility =
+            Visibility.Collapsed;
 
         string[] currentFiles =
             Directory.GetFiles(
