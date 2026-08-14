@@ -1154,27 +1154,163 @@
 
                                         <ContextMenu Style="{StaticResource BrickViewContextMenuStyle}">
 
-                                            <MenuItem
-                                                Click="OpenInStudio_Click"
-                                                Header="Open in Studio"
-                                                Style="{StaticResource BrickViewContextMenuItemStyle}" />
+                                            <MenuItem Click="OpenInStudio_Click" Style="{StaticResource BrickViewContextMenuItemStyle}">
 
-                                            <MenuItem
-                                                Click="ShowInFileExplorer_Click"
-                                                Header="Show in File Explorer"
-                                                Style="{StaticResource BrickViewContextMenuItemStyle}" />
+                                                <MenuItem.Header>
+
+                                                    <Grid>
+
+                                                        <Grid.ColumnDefinitions>
+
+                                                            <ColumnDefinition Width="30" />
+                                                            <ColumnDefinition Width="*" />
+
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Path
+                                                            Width="16"
+                                                            Height="16"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Data="M 3,7 L 3,15 L 13,15 L 13,7 M 8,11 L 8,1 M 5,4 L 8,1 L 11,4"
+                                                            Fill="Transparent"
+                                                            Stretch="Uniform"
+                                                            Stroke="{StaticResource PrimaryTextBrush}"
+                                                            StrokeEndLineCap="Round"
+                                                            StrokeLineJoin="Round"
+                                                            StrokeStartLineCap="Round"
+                                                            StrokeThickness="1.2" />
+
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="12"
+                                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                                            Text="Open in Studio" />
+
+                                                    </Grid>
+
+                                                </MenuItem.Header>
+
+                                            </MenuItem>
+
+                                            <MenuItem Click="ShowInFileExplorer_Click" Style="{StaticResource BrickViewContextMenuItemStyle}">
+
+                                                <MenuItem.Header>
+
+                                                    <Grid>
+
+                                                        <Grid.ColumnDefinitions>
+
+                                                            <ColumnDefinition Width="30" />
+                                                            <ColumnDefinition Width="*" />
+
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Path
+                                                            Width="16"
+                                                            Height="14"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Data="M 1,4 L 6,4 L 8,6 L 15,6 L 15,13 L 1,13 Z M 1,4 L 1,2 L 6,2 L 8,4"
+                                                            Fill="Transparent"
+                                                            Stretch="Fill"
+                                                            Stroke="{StaticResource PrimaryTextBrush}"
+                                                            StrokeLineJoin="Round"
+                                                            StrokeThickness="1.2" />
+
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="12"
+                                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                                            Text="Show in File Explorer" />
+
+                                                    </Grid>
+
+                                                </MenuItem.Header>
+
+                                            </MenuItem>
 
                                             <Separator Style="{StaticResource BrickViewContextMenuSeparatorStyle}" />
 
-                                            <MenuItem
-                                                Click="CopyFilePath_Click"
-                                                Header="Copy file path"
-                                                Style="{StaticResource BrickViewContextMenuItemStyle}" />
+                                            <MenuItem Click="CopyFilePath_Click" Style="{StaticResource BrickViewContextMenuItemStyle}">
 
-                                            <MenuItem
-                                                Click="CopyFileName_Click"
-                                                Header="Copy file name"
-                                                Style="{StaticResource BrickViewContextMenuItemStyle}" />
+                                                <MenuItem.Header>
+
+                                                    <Grid>
+
+                                                        <Grid.ColumnDefinitions>
+
+                                                            <ColumnDefinition Width="30" />
+                                                            <ColumnDefinition Width="*" />
+
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Path
+                                                            Width="15"
+                                                            Height="16"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Data="M 5,1 L 12,1 L 15,4 L 15,15 L 5,15 Z M 3,4 L 1,6 L 1,13 L 11,13 M 12,1 L 12,4 L 15,4"
+                                                            Fill="Transparent"
+                                                            Stretch="Uniform"
+                                                            Stroke="{StaticResource PrimaryTextBrush}"
+                                                            StrokeLineJoin="Round"
+                                                            StrokeThickness="1.2" />
+
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="12"
+                                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                                            Text="Copy file path" />
+
+                                                    </Grid>
+
+                                                </MenuItem.Header>
+
+                                            </MenuItem>
+
+                                            <MenuItem Click="CopyFileName_Click" Style="{StaticResource BrickViewContextMenuItemStyle}">
+
+                                                <MenuItem.Header>
+
+                                                    <Grid>
+
+                                                        <Grid.ColumnDefinitions>
+
+                                                            <ColumnDefinition Width="30" />
+                                                            <ColumnDefinition Width="*" />
+
+                                                        </Grid.ColumnDefinitions>
+
+                                                        <Path
+                                                            Width="15"
+                                                            Height="16"
+                                                            HorizontalAlignment="Center"
+                                                            VerticalAlignment="Center"
+                                                            Data="M 5,1 L 12,1 L 15,4 L 15,15 L 5,15 Z M 3,4 L 1,6 L 1,13 L 11,13 M 12,1 L 12,4 L 15,4 M 7,11 L 7,6 L 10,6 L 10,11 M 6,9 L 11,9"
+                                                            Fill="Transparent"
+                                                            Stretch="Uniform"
+                                                            Stroke="{StaticResource PrimaryTextBrush}"
+                                                            StrokeEndLineCap="Round"
+                                                            StrokeLineJoin="Round"
+                                                            StrokeStartLineCap="Round"
+                                                            StrokeThickness="1.2" />
+
+                                                        <TextBlock
+                                                            Grid.Column="1"
+                                                            VerticalAlignment="Center"
+                                                            FontSize="12"
+                                                            Foreground="{StaticResource PrimaryTextBrush}"
+                                                            Text="Copy file name" />
+
+                                                    </Grid>
+
+                                                </MenuItem.Header>
+
+                                            </MenuItem>
 
                                         </ContextMenu>
 
