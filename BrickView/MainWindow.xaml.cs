@@ -793,12 +793,61 @@ public partial class MainWindow : Window {
 
         if (!string.IsNullOrEmpty(
                 searchText)) {
-            filteredItems =
-                allFileItems.Where(
-                    item =>
-                        item.FileName.Contains(
-                            searchText,
-                            StringComparison.OrdinalIgnoreCase));
+
+            if (!searchText.Contains(
+                    '*',
+                    StringComparison.Ordinal)) {
+
+                filteredItems =
+                    allFileItems.Where(
+                        item =>
+                            item.FileName.Contains(
+                                searchText,
+                                StringComparison.OrdinalIgnoreCase));
+            }
+            else {
+
+                string[] searchParts =
+                    searchText
+                        .Split('*')
+                        .Where(
+                            part =>
+                                !string.IsNullOrEmpty(part))
+                        .ToArray();
+
+                filteredItems =
+                    allFileItems.Where(
+                        item => {
+                            if (searchParts.Length == 0) {
+                                return true;
+                            }
+
+                            string fileName =
+                                item.FileName;
+
+                            int searchPosition =
+                                0;
+
+                            foreach (string searchPart
+                                     in searchParts) {
+                                int matchPosition =
+                                    fileName.IndexOf(
+                                        searchPart,
+                                        searchPosition,
+                                        StringComparison.OrdinalIgnoreCase);
+
+                                if (matchPosition < 0) {
+                                    return false;
+                                }
+
+                                searchPosition =
+                                    matchPosition +
+                                    searchPart.Length;
+                            }
+
+                            return true;
+                        });
+            }
         }
 
         List<IoFileListItem> visibleItems =
