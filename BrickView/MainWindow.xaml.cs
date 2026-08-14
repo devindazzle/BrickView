@@ -48,7 +48,7 @@ public partial class MainWindow : Window
 
     private readonly ThumbnailSizeManager thumbnailSizeManager;
 
-    private readonly IoFileReader ioFileReader;
+    private readonly MetadataLoader metadataLoader;
 
     private readonly List<IoFileListItem> allFileItems;
 
@@ -78,8 +78,8 @@ public partial class MainWindow : Window
         folderWatcher =
             new IoFolderWatcher();
 
-        ioFileReader =
-            new IoFileReader();
+        metadataLoader =
+            new MetadataLoader();
 
         allFileItems =
             new List<IoFileListItem>();
@@ -453,10 +453,6 @@ public partial class MainWindow : Window
                 null,
                 null);
 
-        item.Metadata =
-            ioFileReader.ReadMetadata(
-                filePath);
-
         allFileItems.Add(
             item);
     }
@@ -507,10 +503,13 @@ public partial class MainWindow : Window
             new FileInfo(
                 filePath);
 
-        item.UpdateFileInfo(fileInfo.Length, fileInfo.LastWriteTimeUtc);
+        item.UpdateFileInfo(
+            fileInfo.Length,
+            fileInfo.LastWriteTimeUtc);
+
         item.InvalidateThumbnail();
+
         item.InvalidateMetadata();
-        item.Metadata = ioFileReader.ReadMetadata(filePath);
     }
 
     private void SortAllFileItems()
@@ -640,6 +639,9 @@ public partial class MainWindow : Window
                 _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Visible);
+
+                _ = LoadMetadataAsync(
+                    item);
             }
         }
 
@@ -668,6 +670,34 @@ public partial class MainWindow : Window
                     ThumbnailLoadPriority.Preload);
             }
         }
+    }
+
+    private async Task LoadMetadataAsync(
+        IoFileListItem item)
+    {
+        if (item.Metadata is not null)
+        {
+            return;
+        }
+
+        long fileSize =
+            item.FileSize;
+
+        DateTime lastWriteTimeUtc =
+            item.LastWriteTimeUtc;
+
+        IoModelMetadata? metadata =
+            await metadataLoader.LoadAsync(
+                item.FilePath);
+
+        if (item.FileSize != fileSize ||
+            item.LastWriteTimeUtc != lastWriteTimeUtc)
+        {
+            return;
+        }
+
+        item.Metadata =
+            metadata;
     }
 
     private void Thumbnail_MouseLeftButtonUp(
