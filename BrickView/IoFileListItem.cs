@@ -12,6 +12,8 @@ public class IoFileListItem : INotifyPropertyChanged
 
     public long FileSize { get; private set; }
 
+    public DateTime CreationTimeUtc { get; private set; }
+
     public DateTime LastWriteTimeUtc { get; private set; }
 
     private IoModelMetadata? metadata;
@@ -160,6 +162,7 @@ public class IoFileListItem : INotifyPropertyChanged
         string fileName,
         string filePath,
         long fileSize,
+        DateTime creationTimeUtc,
         DateTime lastWriteTimeUtc,
         BitmapImage? thumbnail,
         string? errorMessage)
@@ -167,6 +170,7 @@ public class IoFileListItem : INotifyPropertyChanged
         FileName = fileName;
         FilePath = filePath;
         FileSize = fileSize;
+        CreationTimeUtc = creationTimeUtc;
         LastWriteTimeUtc = lastWriteTimeUtc;
         this.thumbnail = thumbnail;
         this.errorMessage = errorMessage;
@@ -174,11 +178,9 @@ public class IoFileListItem : INotifyPropertyChanged
         thumbnailStatus = ThumbnailStatus.NotLoaded;
     }
 
-    public void UpdateFileInfo(
-        long fileSize,
-        DateTime lastWriteTimeUtc)
-    {
+    public void UpdateFileInfo(long fileSize, DateTime creationTimeUtc, DateTime lastWriteTimeUtc) {
         FileSize = fileSize;
+        CreationTimeUtc = creationTimeUtc;
         LastWriteTimeUtc = lastWriteTimeUtc;
     }
 

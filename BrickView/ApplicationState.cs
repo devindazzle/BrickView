@@ -12,4 +12,10 @@ public sealed class ApplicationState {
     public string? LastSelectedFolder { get; set; }
 
     public ThumbnailSizePreset? ThumbnailSizePreset { get; set; }
+
+    public FileSortField SortField { get; set; } =
+        FileSortField.FileName;
+
+    public FileSortDirection SortDirection { get; set; } =
+        FileSortDirection.Ascending;
 }

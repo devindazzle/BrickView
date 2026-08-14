@@ -53,7 +53,9 @@ public sealed class WindowStateService {
     public void Save(
         Window window,
         string? lastSelectedFolder,
-        ThumbnailSizePreset thumbnailSizePreset) {
+        ThumbnailSizePreset thumbnailSizePreset,
+        FileSortField sortField = FileSortField.FileName,
+        FileSortDirection sortDirection = FileSortDirection.Ascending) {
         ApplicationState state =
             new ApplicationState {
                 WindowLeft = window.Left,
@@ -61,7 +63,9 @@ public sealed class WindowStateService {
                 WindowWidth = window.Width,
                 WindowHeight = window.Height,
                 LastSelectedFolder = lastSelectedFolder,
-                ThumbnailSizePreset = thumbnailSizePreset
+                ThumbnailSizePreset = thumbnailSizePreset,
+                SortField = sortField,
+                SortDirection = sortDirection
             };
 
         applicationStateService.Save(

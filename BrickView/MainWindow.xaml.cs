@@ -2,7 +2,6 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
-using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace BrickView;
@@ -62,6 +61,18 @@ public partial class MainWindow : Window {
 
     private CancellationTokenSource? folderRefreshCancellation;
 
+    private SortField currentSortField =
+        SortField.FileName;
+
+    private FileSortDirection currentSortDirection =
+        FileSortDirection.Ascending;
+
+    private enum SortField {
+        FileName,
+        CreatedDate,
+        ModifiedDate
+    }
+
     public MainWindow() {
         InitializeComponent();
 
@@ -81,6 +92,26 @@ public partial class MainWindow : Window {
 
         restoredFolder =
             restoredState?.LastSelectedFolder;
+
+        if (restoredState is not null) {
+            currentSortField =
+                restoredState.SortField switch {
+                    FileSortField.FileName =>
+                        SortField.FileName,
+
+                    FileSortField.CreatedDate =>
+                        SortField.CreatedDate,
+
+                    FileSortField.ModifiedDate =>
+                        SortField.ModifiedDate,
+
+                    _ =>
+                        SortField.FileName
+                };
+
+            currentSortDirection =
+                restoredState.SortDirection;
+        }
 
         thumbnailSizeManager =
             ThumbnailSizeManager.Instance;
@@ -131,6 +162,8 @@ public partial class MainWindow : Window {
 
         SearchTextBox.PreviewKeyDown +=
             SearchTextBox_PreviewKeyDown;
+
+        UpdateSortMenu();
     }
 
     public double ThumbnailWidth {
@@ -308,7 +341,6 @@ public partial class MainWindow : Window {
                 break;
 
             default:
-
                 return;
         }
 
@@ -513,6 +545,7 @@ public partial class MainWindow : Window {
                 fileName,
                 filePath,
                 fileInfo.Length,
+                fileInfo.CreationTimeUtc,
                 fileInfo.LastWriteTimeUtc,
                 null,
                 null);
@@ -567,6 +600,7 @@ public partial class MainWindow : Window {
 
         item.UpdateFileInfo(
             fileInfo.Length,
+            fileInfo.CreationTimeUtc,
             fileInfo.LastWriteTimeUtc);
 
         item.InvalidateThumbnail();
@@ -574,14 +608,179 @@ public partial class MainWindow : Window {
         item.InvalidateMetadata();
     }
 
+    private void SortFileName_Click(
+        object sender,
+        RoutedEventArgs e) {
+        SetSortField(
+            SortField.FileName);
+    }
+
+    private void SortCreatedDate_Click(
+        object sender,
+        RoutedEventArgs e) {
+        SetSortField(
+            SortField.CreatedDate);
+    }
+
+    private void SortModifiedDate_Click(
+        object sender,
+        RoutedEventArgs e) {
+        SetSortField(
+            SortField.ModifiedDate);
+    }
+
+    private void SortAscending_Click(
+        object sender,
+        RoutedEventArgs e) {
+        SetSortDirection(
+            FileSortDirection.Ascending);
+    }
+
+    private void SortDescending_Click(
+        object sender,
+        RoutedEventArgs e) {
+        SetSortDirection(
+            FileSortDirection.Descending);
+    }
+
+    private void SetSortField(
+        SortField sortField) {
+        if (currentSortField ==
+            sortField) {
+            return;
+        }
+
+        currentSortField =
+            sortField;
+
+        SortAllFileItems();
+
+        ApplySearchFilter();
+
+        UpdateSortMenu();
+    }
+
+    private void SetSortDirection(
+        FileSortDirection sortDirection) {
+        if (currentSortDirection ==
+            sortDirection) {
+            return;
+        }
+
+        currentSortDirection =
+            sortDirection;
+
+        SortAllFileItems();
+
+        ApplySearchFilter();
+
+        UpdateSortMenu();
+    }
+
     private void SortAllFileItems() {
-        allFileItems.Sort(
-            (
-                left,
-                right) =>
-                StringComparer.OrdinalIgnoreCase.Compare(
-                    left.FileName,
-                    right.FileName));
+        switch (currentSortField) {
+            case SortField.FileName:
+
+                allFileItems.Sort(
+                    (
+                        left,
+                        right) =>
+                        StringComparer.OrdinalIgnoreCase.Compare(
+                            left.FileName,
+                            right.FileName));
+
+                break;
+
+            case SortField.CreatedDate:
+
+                allFileItems.Sort(
+                    (
+                        left,
+                        right) =>
+                        DateTime.Compare(
+                            left.CreationTimeUtc,
+                            right.CreationTimeUtc));
+
+                break;
+
+            case SortField.ModifiedDate:
+
+                allFileItems.Sort(
+                    (
+                        left,
+                        right) =>
+                        DateTime.Compare(
+                            left.LastWriteTimeUtc,
+                            right.LastWriteTimeUtc));
+
+                break;
+        }
+
+        if (currentSortDirection ==
+            FileSortDirection.Descending) {
+            allFileItems.Reverse();
+        }
+    }
+
+    private void UpdateSortMenu() {
+        FileNameSortCheck.Visibility =
+            currentSortField ==
+            SortField.FileName
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        CreatedDateSortCheck.Visibility =
+            currentSortField ==
+            SortField.CreatedDate
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        ModifiedDateSortCheck.Visibility =
+            currentSortField ==
+            SortField.ModifiedDate
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        AscendingSortCheck.Visibility =
+            currentSortDirection ==
+            FileSortDirection.Ascending
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        DescendingSortCheck.Visibility =
+            currentSortDirection ==
+            FileSortDirection.Descending
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+
+        SortDirectionText.Text =
+            currentSortDirection ==
+            FileSortDirection.Ascending
+                ? "↑"
+                : "↓";
+
+        switch (currentSortField) {
+            case SortField.FileName:
+
+                SortButtonContent.Text =
+                    "File name";
+
+                break;
+
+            case SortField.CreatedDate:
+
+                SortButtonContent.Text =
+                    "Created date";
+
+                break;
+
+            case SortField.ModifiedDate:
+
+                SortButtonContent.Text =
+                    "Modified date";
+
+                break;
+        }
     }
 
     private void ApplySearchFilter() {
@@ -766,39 +965,6 @@ public partial class MainWindow : Window {
             return;
         }
 
-        OpenFile(
-            item);
-
-        e.Handled = true;
-    }
-
-    private void OpenInStudio_Click(
-        object sender,
-        RoutedEventArgs e) {
-        if (sender is not System.Windows.Controls.MenuItem menuItem) {
-            return;
-        }
-
-        if (menuItem.Parent is not ContextMenu contextMenu) {
-            return;
-        }
-
-        if (contextMenu.PlacementTarget
-            is not FrameworkElement element) {
-            return;
-        }
-
-        if (element.DataContext
-            is not IoFileListItem item) {
-            return;
-        }
-
-        OpenFile(
-            item);
-    }
-
-    private void OpenFile(
-        IoFileListItem item) {
         if (item.HasError) {
             return;
         }
@@ -809,129 +975,12 @@ public partial class MainWindow : Window {
                     FileName = item.FilePath,
                     UseShellExecute = true
                 });
+
+            e.Handled = true;
         }
         catch (Exception exception) {
             MessageBox.Show(
                 $"Could not open the file.\n\n{exception.Message}",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-
-    private void ShowInFileExplorer_Click(
-        object sender,
-        RoutedEventArgs e) {
-        if (sender is not System.Windows.Controls.MenuItem menuItem) {
-            return;
-        }
-
-        if (menuItem.Parent is not ContextMenu contextMenu) {
-            return;
-        }
-
-        if (contextMenu.PlacementTarget
-            is not FrameworkElement element) {
-            return;
-        }
-
-        if (element.DataContext
-            is not IoFileListItem item) {
-            return;
-        }
-
-        if (!File.Exists(
-                item.FilePath)) {
-            MessageBox.Show(
-                "The file no longer exists.",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Warning);
-
-            return;
-        }
-
-        try {
-            Process.Start(
-                new ProcessStartInfo {
-                    FileName = "explorer.exe",
-                    Arguments =
-                        $"/select,\"{item.FilePath}\"",
-                    UseShellExecute = true
-                });
-        }
-        catch (Exception exception) {
-            MessageBox.Show(
-                $"Could not open File Explorer.\n\n{exception.Message}",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-
-    private void CopyFilePath_Click(
-        object sender,
-        RoutedEventArgs e) {
-        if (sender is not System.Windows.Controls.MenuItem menuItem) {
-            return;
-        }
-
-        if (menuItem.Parent is not ContextMenu contextMenu) {
-            return;
-        }
-
-        if (contextMenu.PlacementTarget
-            is not FrameworkElement element) {
-            return;
-        }
-
-        if (element.DataContext
-            is not IoFileListItem item) {
-            return;
-        }
-
-        try {
-            Clipboard.SetText(
-                item.FilePath);
-        }
-        catch (Exception exception) {
-            MessageBox.Show(
-                $"Could not copy the file path.\n\n{exception.Message}",
-                "BrickView",
-                MessageBoxButton.OK,
-                MessageBoxImage.Error);
-        }
-    }
-
-    private void CopyFileName_Click(
-        object sender,
-        RoutedEventArgs e) {
-        if (sender is not System.Windows.Controls.MenuItem menuItem) {
-            return;
-        }
-
-        if (menuItem.Parent is not ContextMenu contextMenu) {
-            return;
-        }
-
-        if (contextMenu.PlacementTarget
-            is not FrameworkElement element) {
-            return;
-        }
-
-        if (element.DataContext
-            is not IoFileListItem item) {
-            return;
-        }
-
-        try {
-            Clipboard.SetText(
-                Path.GetFileName(
-                    item.FilePath));
-        }
-        catch (Exception exception) {
-            MessageBox.Show(
-                $"Could not copy the file name.\n\n{exception.Message}",
                 "BrickView",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);
@@ -979,12 +1028,30 @@ public partial class MainWindow : Window {
         }
     }
 
+    private FileSortField GetFileSortField() {
+        switch (currentSortField) {
+            case SortField.FileName:
+                return FileSortField.FileName;
+
+            case SortField.CreatedDate:
+                return FileSortField.CreatedDate;
+
+            case SortField.ModifiedDate:
+                return FileSortField.ModifiedDate;
+
+            default:
+                return FileSortField.FileName;
+        }
+    }
+
     protected override void OnClosed(
         EventArgs e) {
         windowStateService.Save(
             this,
             currentFolder,
-            thumbnailSizeManager.Current.Preset);
+            thumbnailSizeManager.Current.Preset,
+            GetFileSortField(),
+            currentSortDirection);
 
         folderRefreshCancellation?.Cancel();
 

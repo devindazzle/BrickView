@@ -15,60 +15,31 @@
 
     <Window.Resources>
 
-        <!--  =====================================================  -->
-        <!--  Studio-inspired colour palette  -->
-        <!--  =====================================================  -->
-
         <SolidColorBrush x:Key="OuterBackgroundBrush" Color="#24252E" />
-
         <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#24252E" />
-
         <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#2A2D34" />
-
         <SolidColorBrush x:Key="CardBackgroundBrush" Color="#24252E" />
-
         <SolidColorBrush x:Key="CardBorderBrush" Color="#303138" />
-
         <SolidColorBrush x:Key="CardSelectedBrush" Color="#394D5F" />
-
         <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#18191D" />
-
         <SolidColorBrush x:Key="PrimaryTextBrush" Color="#F3F3F3" />
-
         <SolidColorBrush x:Key="SecondaryTextBrush" Color="#77777A" />
-
         <SolidColorBrush x:Key="ErrorTextBrush" Color="#FF7B7B" />
-
         <SolidColorBrush x:Key="AccentBrush" Color="#4EA3FF" />
-
         <SolidColorBrush x:Key="ThumbnailOverlayBrush" Color="#B5000000" />
-
         <SolidColorBrush x:Key="ScrollBarTrackBrush" Color="#303138" />
-
         <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#50515A" />
-
         <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#65666F" />
-
-        <!--  =====================================================  -->
-        <!--  Toolbar button  -->
-        <!--  =====================================================  -->
 
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
 
             <Setter Property="Background" Value="#34363A" />
-
             <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
-
             <Setter Property="BorderBrush" Value="#4A4D52" />
-
             <Setter Property="BorderThickness" Value="1" />
-
             <Setter Property="Padding" Value="16,8" />
-
             <Setter Property="FontSize" Value="13" />
-
             <Setter Property="FontWeight" Value="SemiBold" />
-
             <Setter Property="Cursor" Value="Hand" />
 
             <Setter Property="Template">
@@ -125,26 +96,15 @@
 
         </Style>
 
-        <!--  =====================================================  -->
-        <!--  Search box  -->
-        <!--  =====================================================  -->
-
         <Style x:Key="SearchTextBoxStyle" TargetType="TextBox">
 
             <Setter Property="Height" Value="30" />
-
             <Setter Property="Background" Value="#18191D" />
-
             <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
-
             <Setter Property="BorderBrush" Value="#303138" />
-
             <Setter Property="BorderThickness" Value="1" />
-
             <Setter Property="Padding" Value="12,0" />
-
             <Setter Property="FontSize" Value="13" />
-
             <Setter Property="VerticalContentAlignment" Value="Center" />
 
             <Setter Property="Template">
@@ -208,28 +168,16 @@
 
         </Style>
 
-        <!--  =====================================================  -->
-        <!--  Thumbnail size selector  -->
-        <!--  =====================================================  -->
-
         <Style x:Key="ThumbnailSizeSelectorStyle" TargetType="RadioButton">
 
             <Setter Property="Height" Value="28" />
-
             <Setter Property="Padding" Value="13,0" />
-
             <Setter Property="FontSize" Value="12" />
-
             <Setter Property="FontWeight" Value="SemiBold" />
-
             <Setter Property="Foreground" Value="{StaticResource SecondaryTextBrush}" />
-
             <Setter Property="Background" Value="Transparent" />
-
             <Setter Property="BorderBrush" Value="#4A4D52" />
-
             <Setter Property="BorderThickness" Value="0,0,1,0" />
-
             <Setter Property="Cursor" Value="Hand" />
 
             <Setter Property="Template">
@@ -296,22 +244,144 @@
 
         </Style>
 
-        <!--  =====================================================  -->
-        <!--  ListBox item  -->
-        <!--  =====================================================  -->
+        <Style x:Key="SortButtonStyle" TargetType="ToggleButton">
+
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Width" Value="178" />
+            <Setter Property="Background" Value="#34363A" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="BorderBrush" Value="#4A4D52" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="FontSize" Value="12" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="Cursor" Value="Hand" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="ToggleButton">
+
+                        <Border
+                            x:Name="SortButtonBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+
+                            <Grid>
+
+                                <Grid.ColumnDefinitions>
+
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="Auto" />
+
+                                </Grid.ColumnDefinitions>
+
+                                <ContentPresenter
+                                    Grid.Column="0"
+                                    Margin="{TemplateBinding Padding}"
+                                    HorizontalAlignment="Left"
+                                    VerticalAlignment="Center"
+                                    Content="{TemplateBinding Content}"
+                                    ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                                <TextBlock
+                                    Grid.Column="1"
+                                    Margin="0,0,10,0"
+                                    VerticalAlignment="Center"
+                                    FontSize="14"
+                                    Foreground="{StaticResource SecondaryTextBrush}"
+                                    Text="⌄" />
+
+                            </Grid>
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="SortButtonBorder" Property="Background" Value="#414449" />
+
+                                <Setter TargetName="SortButtonBorder" Property="BorderBrush" Value="#5D6167" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+
+                                <Setter TargetName="SortButtonBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+
+                                <Setter TargetName="SortButtonBorder" Property="Background" Value="#394D5F" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+        <Style x:Key="SortPopupOptionStyle" TargetType="Button">
+
+            <Setter Property="Height" Value="36" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="Cursor" Value="Hand" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="Button">
+
+                        <Border
+                            x:Name="OptionBorder"
+                            Background="{TemplateBinding Background}"
+                            CornerRadius="3">
+
+                            <ContentPresenter
+                                Margin="{TemplateBinding Padding}"
+                                HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="OptionBorder" Property="Background" Value="#394D5F" />
+
+                            </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
 
         <Style x:Key="MocListBoxItemStyle" TargetType="ListBoxItem">
 
             <Setter Property="Padding" Value="0" />
-
             <Setter Property="Margin" Value="0" />
-
             <Setter Property="Background" Value="Transparent" />
-
             <Setter Property="BorderThickness" Value="0" />
-
             <Setter Property="HorizontalContentAlignment" Value="Center" />
-
             <Setter Property="VerticalContentAlignment" Value="Center" />
 
             <Setter Property="Template">
@@ -366,16 +436,10 @@
 
         </Style>
 
-        <!--  =====================================================  -->
-        <!--  Studio-inspired ScrollBar  -->
-        <!--  =====================================================  -->
-
         <Style TargetType="ScrollBar">
 
             <Setter Property="Width" Value="12" />
-
             <Setter Property="Background" Value="{StaticResource ScrollBarTrackBrush}" />
-
             <Setter Property="Foreground" Value="{StaticResource ScrollBarThumbBrush}" />
 
             <Setter Property="Template">
@@ -467,7 +531,6 @@
                 <Trigger Property="Orientation" Value="Horizontal">
 
                     <Setter Property="Height" Value="12" />
-
                     <Setter Property="Width" Value="Auto" />
 
                 </Trigger>
@@ -483,16 +546,10 @@
         <Grid.RowDefinitions>
 
             <RowDefinition Height="58" />
-
             <RowDefinition Height="Auto" />
-
             <RowDefinition Height="*" />
 
         </Grid.RowDefinitions>
-
-        <!--  =====================================================  -->
-        <!--  Top toolbar  -->
-        <!--  =====================================================  -->
 
         <Border
             Grid.Row="0"
@@ -505,9 +562,7 @@
                 <Grid.ColumnDefinitions>
 
                     <ColumnDefinition Width="Auto" />
-
                     <ColumnDefinition Width="*" />
-
                     <ColumnDefinition Width="Auto" />
 
                 </Grid.ColumnDefinitions>
@@ -519,8 +574,6 @@
                     FontWeight="Bold"
                     Foreground="{StaticResource PrimaryTextBrush}"
                     Text="BrickView" />
-
-                <!--  Current folder  -->
 
                 <TextBlock
                     x:Name="FolderText"
@@ -555,10 +608,6 @@
 
         </Border>
 
-        <!--  =====================================================  -->
-        <!--  Search / size selector toolbar  -->
-        <!--  =====================================================  -->
-
         <Border
             Grid.Row="1"
             Padding="9"
@@ -571,7 +620,7 @@
                 <Grid.ColumnDefinitions>
 
                     <ColumnDefinition Width="*" />
-
+                    <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
 
                 </Grid.ColumnDefinitions>
@@ -582,8 +631,291 @@
                     HorizontalAlignment="Left"
                     Style="{StaticResource SearchTextBoxStyle}" />
 
-                <Border
+                <ToggleButton
+                    x:Name="SortButton"
                     Grid.Column="1"
+                    Margin="0,0,8,0"
+                    IsChecked="{Binding IsOpen, ElementName=SortPopup, Mode=TwoWay}"
+                    Style="{StaticResource SortButtonStyle}">
+
+                    <Grid>
+
+                        <Grid.ColumnDefinitions>
+
+                            <ColumnDefinition Width="30" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock
+                            Grid.Column="0"
+                            VerticalAlignment="Center"
+                            FontSize="14"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="Aa" />
+
+                        <TextBlock
+                            x:Name="SortButtonContent"
+                            Grid.Column="1"
+                            VerticalAlignment="Center"
+                            FontSize="12"
+                            FontWeight="SemiBold"
+                            Foreground="{StaticResource PrimaryTextBrush}"
+                            Text="File name" />
+
+                        <TextBlock
+                            x:Name="SortDirectionText"
+                            Grid.Column="2"
+                            Margin="5,0,0,0"
+                            VerticalAlignment="Center"
+                            FontSize="16"
+                            FontWeight="Bold"
+                            Foreground="{StaticResource AccentBrush}"
+                            Text="↑" />
+
+                    </Grid>
+
+                </ToggleButton>
+
+                <Popup
+                    x:Name="SortPopup"
+                    AllowsTransparency="True"
+                    Placement="Bottom"
+                    PlacementTarget="{Binding ElementName=SortButton}"
+                    StaysOpen="False">
+
+                    <Border
+                        Width="235"
+                        Margin="0,5,0,0"
+                        Padding="8"
+                        Background="#2A2D34"
+                        BorderBrush="#4A4D52"
+                        BorderThickness="1"
+                        CornerRadius="5">
+
+                        <StackPanel>
+
+                            <TextBlock
+                                Margin="8,4,8,6"
+                                FontSize="10"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="SORT BY" />
+
+                            <Button Click="SortFileName_Click" Style="{StaticResource SortPopupOptionStyle}">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="Aa" />
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="File name" />
+
+                                    <TextBlock
+                                        x:Name="FileNameSortCheck"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Text="✓" />
+
+                                </Grid>
+
+                            </Button>
+
+                            <Button Click="SortCreatedDate_Click" Style="{StaticResource SortPopupOptionStyle}">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="▣" />
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="Created date" />
+
+                                    <TextBlock
+                                        x:Name="CreatedDateSortCheck"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Text="✓"
+                                        Visibility="Collapsed" />
+
+                                </Grid>
+
+                            </Button>
+
+                            <Button Click="SortModifiedDate_Click" Style="{StaticResource SortPopupOptionStyle}">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="◷" />
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="Modified date" />
+
+                                    <TextBlock
+                                        x:Name="ModifiedDateSortCheck"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Text="✓"
+                                        Visibility="Collapsed" />
+
+                                </Grid>
+
+                            </Button>
+
+                            <Border
+                                Height="1"
+                                Margin="6,6"
+                                Background="#4A4D52" />
+
+                            <TextBlock
+                                Margin="8,0,8,6"
+                                FontSize="10"
+                                FontWeight="SemiBold"
+                                Foreground="{StaticResource SecondaryTextBrush}"
+                                Text="ORDER" />
+
+                            <Button Click="SortAscending_Click" Style="{StaticResource SortPopupOptionStyle}">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="18"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="↑" />
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="Ascending" />
+
+                                    <TextBlock
+                                        x:Name="AscendingSortCheck"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Text="✓" />
+
+                                </Grid>
+
+                            </Button>
+
+                            <Button Click="SortDescending_Click" Style="{StaticResource SortPopupOptionStyle}">
+
+                                <Grid>
+
+                                    <Grid.ColumnDefinitions>
+
+                                        <ColumnDefinition Width="30" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="24" />
+
+                                    </Grid.ColumnDefinitions>
+
+                                    <TextBlock
+                                        Grid.Column="0"
+                                        VerticalAlignment="Center"
+                                        FontSize="18"
+                                        Foreground="{StaticResource PrimaryTextBrush}"
+                                        Text="↓" />
+
+                                    <TextBlock
+                                        Grid.Column="1"
+                                        VerticalAlignment="Center"
+                                        FontSize="12"
+                                        Text="Descending" />
+
+                                    <TextBlock
+                                        x:Name="DescendingSortCheck"
+                                        Grid.Column="2"
+                                        HorizontalAlignment="Center"
+                                        VerticalAlignment="Center"
+                                        FontSize="14"
+                                        Foreground="{StaticResource AccentBrush}"
+                                        Text="✓"
+                                        Visibility="Collapsed" />
+
+                                </Grid>
+
+                            </Button>
+
+                        </StackPanel>
+
+                    </Border>
+
+                </Popup>
+
+                <Border
+                    Grid.Column="2"
                     Height="30"
                     Padding="1"
                     VerticalAlignment="Center"
@@ -663,10 +995,6 @@
 
         </Border>
 
-        <!--  =====================================================  -->
-        <!--  Thumbnail area  -->
-        <!--  =====================================================  -->
-
         <Border Grid.Row="2" Background="{StaticResource ContentBackgroundBrush}">
 
             <Grid>
@@ -701,8 +1029,6 @@
                                 Height="{Binding CardHeight, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
                                 Margin="0">
 
-                                <!--  Thumbnail  -->
-
                                 <Border
                                     x:Name="ThumbnailBorder"
                                     Width="{Binding ThumbnailWidth, RelativeSource={RelativeSource AncestorType={x:Type Window}}}"
@@ -714,24 +1040,6 @@
                                     Cursor="Hand"
                                     MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"
                                     SnapsToDevicePixels="True">
-
-                                    <Border.ContextMenu>
-
-                                        <ContextMenu>
-
-                                            <MenuItem Click="OpenInStudio_Click" Header="Open in Studio" />
-
-                                            <MenuItem Click="ShowInFileExplorer_Click" Header="Show in File Explorer" />
-
-                                            <Separator />
-
-                                            <MenuItem Click="CopyFilePath_Click" Header="Copy file path" />
-
-                                            <MenuItem Click="CopyFileName_Click" Header="Copy file name" />
-
-                                        </ContextMenu>
-
-                                    </Border.ContextMenu>
 
                                     <Grid ClipToBounds="True">
 
@@ -762,8 +1070,6 @@
 
                                         </Image>
 
-                                        <!--  Loading  -->
-
                                         <TextBlock
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
@@ -791,8 +1097,6 @@
                                             </TextBlock.Style>
 
                                         </TextBlock>
-
-                                        <!--  Not loaded  -->
 
                                         <TextBlock
                                             HorizontalAlignment="Center"
@@ -822,8 +1126,6 @@
 
                                         </TextBlock>
 
-                                        <!--  No thumbnail  -->
-
                                         <TextBlock
                                             HorizontalAlignment="Center"
                                             VerticalAlignment="Center"
@@ -851,8 +1153,6 @@
                                             </TextBlock.Style>
 
                                         </TextBlock>
-
-                                        <!--  Invalid file  -->
 
                                         <TextBlock
                                             HorizontalAlignment="Center"
@@ -882,8 +1182,6 @@
                                             </TextBlock.Style>
 
                                         </TextBlock>
-
-                                        <!--  Hover overlay  -->
 
                                         <Border
                                             Background="{StaticResource ThumbnailOverlayBrush}"
@@ -952,8 +1250,6 @@
 
                                 </Border>
 
-                                <!--  File name  -->
-
                                 <TextBlock
                                     Margin="2,8,2,0"
                                     FontSize="13"
@@ -963,16 +1259,12 @@
                                     TextTrimming="CharacterEllipsis"
                                     ToolTip="{Binding FilePath}" />
 
-                                <!--  Parts count  -->
-
                                 <TextBlock
                                     Margin="2,3,2,0"
                                     FontSize="11"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource SecondaryTextBrush}"
                                     Text="{Binding Metadata.PartCount, StringFormat={}{0} parts}" />
-
-                                <!--  Error message  -->
 
                                 <TextBlock
                                     Margin="2,3,2,0"
