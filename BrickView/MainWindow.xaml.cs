@@ -6,8 +6,7 @@ using System.Windows.Input;
 
 namespace BrickView;
 
-public partial class MainWindow : Window
-{
+public partial class MainWindow : Window {
     public static readonly DependencyProperty ThumbnailWidthProperty =
         DependencyProperty.Register(
             nameof(ThumbnailWidth),
@@ -50,17 +49,37 @@ public partial class MainWindow : Window
 
     private readonly MetadataLoader metadataLoader;
 
+    private readonly WindowStateService windowStateService;
+
     private readonly HashSet<IoFileListItem> metadataLoadingItems;
 
     private readonly List<IoFileListItem> allFileItems;
 
     private string? currentFolder;
 
+    private string? restoredFolder;
+
     private CancellationTokenSource? folderRefreshCancellation;
 
-    public MainWindow()
-    {
+    public MainWindow() {
         InitializeComponent();
+
+        Loaded +=
+            MainWindow_Loaded;
+
+        ApplicationStateService applicationStateService =
+            new ApplicationStateService();
+
+        windowStateService =
+            new WindowStateService(
+                applicationStateService);
+
+        ApplicationState? restoredState =
+            windowStateService.Restore(
+                this);
+
+        restoredFolder =
+            restoredState?.LastSelectedFolder;
 
         thumbnailSizeManager =
             ThumbnailSizeManager.Instance;
@@ -68,8 +87,23 @@ public partial class MainWindow : Window
         thumbnailSizeManager.SizeChanged +=
             ThumbnailSizeManager_SizeChanged;
 
+        metadataLoadingItems =
+            new HashSet<IoFileListItem>();
+
+        allFileItems =
+            new List<IoFileListItem>();
+
+        if (restoredState?.ThumbnailSizePreset is
+            ThumbnailSizePreset restoredPreset) {
+            thumbnailSizeManager.SetSize(
+                restoredPreset);
+        }
+
         ApplyThumbnailSize(
             thumbnailSizeManager.Current);
+
+        SetThumbnailSizeSelector(
+            thumbnailSizeManager.Current.Preset);
 
         thumbnailLoader =
             new ThumbnailLoader(360);
@@ -82,12 +116,6 @@ public partial class MainWindow : Window
 
         metadataLoader =
             new MetadataLoader();
-
-        metadataLoadingItems =
-            new HashSet<IoFileListItem>();
-
-        allFileItems =
-            new List<IoFileListItem>();
 
         folderWatcher.FolderChanged +=
             FolderWatcher_FolderChanged;
@@ -104,79 +132,112 @@ public partial class MainWindow : Window
             SearchTextBox_PreviewKeyDown;
     }
 
-    public double ThumbnailWidth
-    {
-        get
-        {
+    public double ThumbnailWidth {
+        get {
             return (double)GetValue(
                 ThumbnailWidthProperty);
         }
 
-        private set
-        {
+        private set {
             SetValue(
                 ThumbnailWidthProperty,
                 value);
         }
     }
 
-    public double ThumbnailHeight
-    {
-        get
-        {
+    public double ThumbnailHeight {
+        get {
             return (double)GetValue(
                 ThumbnailHeightProperty);
         }
 
-        private set
-        {
+        private set {
             SetValue(
                 ThumbnailHeightProperty,
                 value);
         }
     }
 
-    public double CardWidth
-    {
-        get
-        {
+    public double CardWidth {
+        get {
             return (double)GetValue(
                 CardWidthProperty);
         }
 
-        private set
-        {
+        private set {
             SetValue(
                 CardWidthProperty,
                 value);
         }
     }
 
-    public double CardHeight
-    {
-        get
-        {
+    public double CardHeight {
+        get {
             return (double)GetValue(
                 CardHeightProperty);
         }
 
-        private set
-        {
+        private set {
             SetValue(
                 CardHeightProperty,
                 value);
         }
     }
 
+    private async void MainWindow_Loaded(
+        object sender,
+        RoutedEventArgs e) {
+        Loaded -=
+            MainWindow_Loaded;
+
+        if (string.IsNullOrWhiteSpace(
+                restoredFolder)) {
+            return;
+        }
+
+        string folder =
+            restoredFolder;
+
+        restoredFolder =
+            null;
+
+        if (!Directory.Exists(
+                folder)) {
+            currentFolder =
+                null;
+
+            NoFolderSelectedText.Visibility =
+                Visibility.Visible;
+
+            FolderText.Text =
+                string.Empty;
+
+            return;
+        }
+
+        currentFolder =
+            folder;
+
+        NoFolderSelectedText.Visibility =
+            Visibility.Collapsed;
+
+        FolderText.Text =
+            folder;
+
+        folderWatcher.Start(
+            folder);
+
+        await LoadIoFilesAsync(
+            folder);
+    }
+
     private void ThumbnailSizeManager_SizeChanged(
-        ThumbnailSizeDefinition newSize)
-    {
+        ThumbnailSizeDefinition newSize) {
         ApplyThumbnailSize(
             newSize);
 
         foreach (IoFileListItem item
-                 in allFileItems)
-        {
+                 in allFileItems) {
             item.InvalidateThumbnail();
         }
 
@@ -184,8 +245,7 @@ public partial class MainWindow : Window
     }
 
     private void ApplyThumbnailSize(
-        ThumbnailSizeDefinition size)
-    {
+        ThumbnailSizeDefinition size) {
         ThumbnailWidth =
             size.ThumbnailWidth;
 
@@ -199,24 +259,32 @@ public partial class MainWindow : Window
             size.CardHeight;
     }
 
+    private void SetThumbnailSizeSelector(
+        ThumbnailSizePreset preset) {
+        SmallThumbnailSizeRadioButton.IsChecked =
+            preset == ThumbnailSizePreset.Small;
+
+        MediumThumbnailSizeRadioButton.IsChecked =
+            preset == ThumbnailSizePreset.Medium;
+
+        LargeThumbnailSizeRadioButton.IsChecked =
+            preset == ThumbnailSizePreset.Large;
+    }
+
     private void ThumbnailSizeSelector_Checked(
         object sender,
-        RoutedEventArgs e)
-    {
-        if (sender is not System.Windows.Controls.RadioButton radioButton)
-        {
+        RoutedEventArgs e) {
+        if (sender is not System.Windows.Controls.RadioButton radioButton) {
             return;
         }
 
-        if (radioButton.Tag is not string presetName)
-        {
+        if (radioButton.Tag is not string presetName) {
             return;
         }
 
         ThumbnailSizePreset preset;
 
-        switch (presetName)
-        {
+        switch (presetName) {
             case "Small":
 
                 preset =
@@ -244,8 +312,7 @@ public partial class MainWindow : Window
         }
 
         if (thumbnailSizeManager.Current.Preset ==
-            preset)
-        {
+            preset) {
             return;
         }
 
@@ -255,27 +322,24 @@ public partial class MainWindow : Window
 
     private async void SelectFolder_Click(
         object sender,
-        RoutedEventArgs e)
-    {
+        RoutedEventArgs e) {
         OpenFolderDialog dialog =
-            new OpenFolderDialog
-            {
+            new OpenFolderDialog {
                 Title = "Pick Folder"
             };
 
         bool? result =
             dialog.ShowDialog();
 
-        if (result != true)
-        {
+        if (result != true) {
             return;
         }
 
         string folder =
             dialog.FolderName;
 
-        if (string.IsNullOrWhiteSpace(folder))
-        {
+        if (string.IsNullOrWhiteSpace(
+                folder)) {
             return;
         }
 
@@ -297,14 +361,12 @@ public partial class MainWindow : Window
 
     private async void RefreshView_Click(
         object sender,
-        RoutedEventArgs e)
-    {
+        RoutedEventArgs e) {
         await RefreshCurrentFolderAsync();
     }
 
     private async Task LoadIoFilesAsync(
-        string folder)
-    {
+        string folder) {
         allFileItems.Clear();
 
         metadataLoadingItems.Clear();
@@ -324,8 +386,7 @@ public partial class MainWindow : Window
                     StringComparer.OrdinalIgnoreCase)
                 .ToArray();
 
-        foreach (string file in files)
-        {
+        foreach (string file in files) {
             AddFileListItem(
                 file);
         }
@@ -337,17 +398,14 @@ public partial class MainWindow : Window
         await Task.CompletedTask;
     }
 
-    private async Task RefreshCurrentFolderAsync()
-    {
+    private async Task RefreshCurrentFolderAsync() {
         if (string.IsNullOrWhiteSpace(
-                currentFolder))
-        {
+                currentFolder)) {
             return;
         }
 
         if (!Directory.Exists(
-                currentFolder))
-        {
+                currentFolder)) {
             MessageBox.Show(
                 "The selected folder no longer exists.",
                 "BrickView",
@@ -398,10 +456,8 @@ public partial class MainWindow : Window
                 currentFiles);
 
         foreach (FileChange change
-                 in diff.Changes)
-        {
-            switch (change.ChangeType)
-            {
+                 in diff.Changes) {
+            switch (change.ChangeType) {
                 case FileChangeType.Added:
 
                     AddFileListItem(
@@ -437,11 +493,9 @@ public partial class MainWindow : Window
     }
 
     private void AddFileListItem(
-        string filePath)
-    {
+        string filePath) {
         if (!File.Exists(
-                filePath))
-        {
+                filePath)) {
             return;
         }
 
@@ -467,8 +521,7 @@ public partial class MainWindow : Window
     }
 
     private void RemoveFileListItem(
-        string filePath)
-    {
+        string filePath) {
         IoFileListItem? item =
             allFileItems
                 .FirstOrDefault(
@@ -478,8 +531,7 @@ public partial class MainWindow : Window
                             filePath,
                             StringComparison.OrdinalIgnoreCase));
 
-        if (item is not null)
-        {
+        if (item is not null) {
             metadataLoadingItems.Remove(
                 item);
 
@@ -489,8 +541,7 @@ public partial class MainWindow : Window
     }
 
     private void UpdateModifiedFile(
-        string filePath)
-    {
+        string filePath) {
         IoFileListItem? item =
             allFileItems
                 .FirstOrDefault(
@@ -500,14 +551,12 @@ public partial class MainWindow : Window
                             filePath,
                             StringComparison.OrdinalIgnoreCase));
 
-        if (item is null)
-        {
+        if (item is null) {
             return;
         }
 
         if (!File.Exists(
-                filePath))
-        {
+                filePath)) {
             return;
         }
 
@@ -524,8 +573,7 @@ public partial class MainWindow : Window
         item.InvalidateMetadata();
     }
 
-    private void SortAllFileItems()
-    {
+    private void SortAllFileItems() {
         allFileItems.Sort(
             (
                 left,
@@ -535,8 +583,7 @@ public partial class MainWindow : Window
                     right.FileName));
     }
 
-    private void ApplySearchFilter()
-    {
+    private void ApplySearchFilter() {
         string searchText =
             SearchTextBox.Text.Trim();
 
@@ -544,8 +591,7 @@ public partial class MainWindow : Window
             allFileItems;
 
         if (!string.IsNullOrEmpty(
-                searchText))
-        {
+                searchText)) {
             filteredItems =
                 allFileItems.Where(
                     item =>
@@ -560,20 +606,17 @@ public partial class MainWindow : Window
         FileList.Items.Clear();
 
         foreach (IoFileListItem item
-                 in visibleItems)
-        {
+                 in visibleItems) {
             FileList.Items.Add(
                 item);
         }
 
         if (!string.IsNullOrEmpty(searchText)
-            && visibleItems.Count == 0)
-        {
+            && visibleItems.Count == 0) {
             NoResultsText.Visibility =
                 Visibility.Visible;
         }
-        else
-        {
+        else {
             NoResultsText.Visibility =
                 Visibility.Collapsed;
         }
@@ -581,17 +624,14 @@ public partial class MainWindow : Window
 
     private void SearchTextBox_TextChanged(
         object sender,
-        System.Windows.Controls.TextChangedEventArgs e)
-    {
+        System.Windows.Controls.TextChangedEventArgs e) {
         ApplySearchFilter();
     }
 
     private void SearchTextBox_PreviewKeyDown(
         object sender,
-        KeyEventArgs e)
-    {
-        if (e.Key != Key.Escape)
-        {
+        KeyEventArgs e) {
+        if (e.Key != Key.Escape) {
             return;
         }
 
@@ -604,11 +644,9 @@ public partial class MainWindow : Window
 
     private void FileList_ViewportChanged(
         object sender,
-        RoutedEventArgs e)
-    {
+        RoutedEventArgs e) {
         if (e is not ViewportChangedEventArgs
-            viewportEventArgs)
-        {
+            viewportEventArgs) {
             return;
         }
 
@@ -621,8 +659,7 @@ public partial class MainWindow : Window
         int itemCount =
             FileList.Items.Count;
 
-        if (itemCount == 0)
-        {
+        if (itemCount == 0) {
             return;
         }
 
@@ -643,11 +680,9 @@ public partial class MainWindow : Window
         for (
             int index = clampedFirstIndex;
             index <= clampedLastIndex;
-            index++)
-        {
+            index++) {
             if (FileList.Items[index]
-                is IoFileListItem item)
-            {
+                is IoFileListItem item) {
                 _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Visible);
@@ -672,11 +707,9 @@ public partial class MainWindow : Window
         for (
             int index = preloadStart;
             index <= preloadEnd;
-            index++)
-        {
+            index++) {
             if (FileList.Items[index]
-                is IoFileListItem item)
-            {
+                is IoFileListItem item) {
                 _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Preload);
@@ -685,21 +718,17 @@ public partial class MainWindow : Window
     }
 
     private async Task LoadMetadataAsync(
-        IoFileListItem item)
-    {
-        if (item.Metadata is not null)
-        {
+        IoFileListItem item) {
+        if (item.Metadata is not null) {
             return;
         }
 
         if (!metadataLoadingItems.Add(
-                item))
-        {
+                item)) {
             return;
         }
 
-        try
-        {
+        try {
             long fileSize =
                 item.FileSize;
 
@@ -711,16 +740,14 @@ public partial class MainWindow : Window
                     item.FilePath);
 
             if (item.FileSize != fileSize ||
-                item.LastWriteTimeUtc != lastWriteTimeUtc)
-            {
+                item.LastWriteTimeUtc != lastWriteTimeUtc) {
                 return;
             }
 
             item.Metadata =
                 metadata;
         }
-        finally
-        {
+        finally {
             metadataLoadingItems.Remove(
                 item);
         }
@@ -728,37 +755,30 @@ public partial class MainWindow : Window
 
     private void Thumbnail_MouseLeftButtonUp(
         object sender,
-        MouseButtonEventArgs e)
-    {
-        if (sender is not FrameworkElement element)
-        {
+        MouseButtonEventArgs e) {
+        if (sender is not FrameworkElement element) {
             return;
         }
 
         if (element.DataContext
-            is not IoFileListItem item)
-        {
+            is not IoFileListItem item) {
             return;
         }
 
-        if (item.HasError)
-        {
+        if (item.HasError) {
             return;
         }
 
-        try
-        {
+        try {
             Process.Start(
-                new ProcessStartInfo
-                {
+                new ProcessStartInfo {
                     FileName = item.FilePath,
                     UseShellExecute = true
                 });
 
             e.Handled = true;
         }
-        catch (Exception exception)
-        {
+        catch (Exception exception) {
             MessageBox.Show(
                 $"Could not open the file.\n\n{exception.Message}",
                 "BrickView",
@@ -769,14 +789,12 @@ public partial class MainWindow : Window
 
     private void FolderWatcher_FolderChanged(
         object? sender,
-        EventArgs e)
-    {
+        EventArgs e) {
         Dispatcher.InvokeAsync(
             ScheduleFolderRefresh);
     }
 
-    private void ScheduleFolderRefresh()
-    {
+    private void ScheduleFolderRefresh() {
         folderRefreshCancellation?.Cancel();
 
         folderRefreshCancellation?.Dispose();
@@ -792,31 +810,31 @@ public partial class MainWindow : Window
     }
 
     private async Task DebouncedFolderRefreshAsync(
-        CancellationToken cancellationToken)
-    {
-        try
-        {
+        CancellationToken cancellationToken) {
+        try {
             await Task.Delay(
                 TimeSpan.FromMilliseconds(300),
                 cancellationToken);
 
-            if (cancellationToken.IsCancellationRequested)
-            {
+            if (cancellationToken.IsCancellationRequested) {
                 return;
             }
 
             await RefreshCurrentFolderAsync();
         }
-        catch (OperationCanceledException)
-        {
+        catch (OperationCanceledException) {
             // Expected when a new file system event
             // resets the debounce timer.
         }
     }
 
     protected override void OnClosed(
-        EventArgs e)
-    {
+        EventArgs e) {
+        windowStateService.Save(
+            this,
+            currentFolder,
+            thumbnailSizeManager.Current.Preset);
+
         folderRefreshCancellation?.Cancel();
 
         folderRefreshCancellation?.Dispose();

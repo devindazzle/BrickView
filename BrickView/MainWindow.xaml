@@ -596,6 +596,7 @@
                     <StackPanel Orientation="Horizontal">
 
                         <RadioButton
+                            x:Name="SmallThumbnailSizeRadioButton"
                             Width="68"
                             Checked="ThumbnailSizeSelector_Checked"
                             GroupName="ThumbnailSize"
@@ -615,10 +616,10 @@
                         </RadioButton>
 
                         <RadioButton
+                            x:Name="MediumThumbnailSizeRadioButton"
                             Width="78"
                             Checked="ThumbnailSizeSelector_Checked"
                             GroupName="ThumbnailSize"
-                            IsChecked="True"
                             Style="{StaticResource ThumbnailSizeSelectorStyle}"
                             Tag="Medium"
                             ToolTip="Medium">
@@ -635,6 +636,7 @@
                         </RadioButton>
 
                         <RadioButton
+                            x:Name="LargeThumbnailSizeRadioButton"
                             Width="68"
                             Checked="ThumbnailSizeSelector_Checked"
                             GroupName="ThumbnailSize"
