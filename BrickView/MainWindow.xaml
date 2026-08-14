@@ -950,7 +950,7 @@
                                     FontSize="11"
                                     FontWeight="SemiBold"
                                     Foreground="{StaticResource SecondaryTextBrush}"
-                                    Text="" />
+                                    Text="{Binding Metadata.PartCount, StringFormat={}{0} parts}" />
 
                                 <!--  Error message  -->
 
