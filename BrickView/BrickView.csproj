@@ -6,6 +6,7 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <ApplicationIcon>BrickView.ico</ApplicationIcon>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +14,19 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Remove="BrickView.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Include="BrickView.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Include="D:\WPF\BrickView\BrickView\.editorconfig" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="BrickView.ico" />
   </ItemGroup>
 
 </Project>

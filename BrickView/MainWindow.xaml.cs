@@ -227,6 +227,9 @@ public partial class MainWindow : Window {
 
         if (string.IsNullOrWhiteSpace(
                 restoredFolder)) {
+            ModelCountText.Text =
+                "0 models";
+
             return;
         }
 
@@ -246,6 +249,9 @@ public partial class MainWindow : Window {
 
             FolderText.Text =
                 string.Empty;
+
+            ModelCountText.Text =
+                "0 models";
 
             return;
         }
@@ -410,6 +416,9 @@ public partial class MainWindow : Window {
         NoResultsText.Visibility =
             Visibility.Collapsed;
 
+        ModelCountText.Text =
+            "0 models";
+
         string[] files =
             Directory.GetFiles(
                 folder,
@@ -464,6 +473,9 @@ public partial class MainWindow : Window {
 
             FolderText.Text =
                 string.Empty;
+
+            ModelCountText.Text =
+                "0 models";
 
             return;
         }
@@ -861,6 +873,22 @@ public partial class MainWindow : Window {
                 item);
         }
 
+        int visibleCount =
+            visibleItems.Count;
+
+        int totalCount =
+            allFileItems.Count;
+
+        if (visibleCount == totalCount) {
+            ModelCountText.Text =
+                CreateModelCountText(
+                    totalCount);
+        }
+        else {
+            ModelCountText.Text =
+                $"{visibleCount} of {totalCount} models";
+        }
+
         if (!string.IsNullOrEmpty(searchText)
             && visibleItems.Count == 0) {
             NoResultsText.Visibility =
@@ -870,6 +898,13 @@ public partial class MainWindow : Window {
             NoResultsText.Visibility =
                 Visibility.Collapsed;
         }
+    }
+
+    private string CreateModelCountText(
+        int modelCount) {
+        return modelCount == 1
+            ? "1 model"
+            : $"{modelCount} models";
     }
 
     private void SearchTextBox_TextChanged(

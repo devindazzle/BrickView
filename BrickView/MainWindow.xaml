@@ -69,7 +69,6 @@
                             <Trigger Property="IsMouseOver" Value="True">
 
                                 <Setter TargetName="ButtonBorder" Property="Background" Value="#414449" />
-
                                 <Setter TargetName="ButtonBorder" Property="BorderBrush" Value="#5D6167" />
 
                             </Trigger>
@@ -153,7 +152,6 @@
                             <Trigger Property="IsKeyboardFocusWithin" Value="True">
 
                                 <Setter TargetName="SearchPlaceholder" Property="Visibility" Value="Collapsed" />
-
                                 <Setter TargetName="SearchBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
 
                             </Trigger>
@@ -206,7 +204,6 @@
                             <Trigger Property="IsMouseOver" Value="True">
 
                                 <Setter TargetName="SelectorBorder" Property="Background" Value="#414449" />
-
                                 <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
 
                             </Trigger>
@@ -214,7 +211,6 @@
                             <Trigger Property="IsChecked" Value="True">
 
                                 <Setter TargetName="SelectorBorder" Property="Background" Value="{StaticResource CardSelectedBrush}" />
-
                                 <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
 
                             </Trigger>
@@ -304,7 +300,6 @@
                             <Trigger Property="IsMouseOver" Value="True">
 
                                 <Setter TargetName="SortButtonBorder" Property="Background" Value="#414449" />
-
                                 <Setter TargetName="SortButtonBorder" Property="BorderBrush" Value="#5D6167" />
 
                             </Trigger>
@@ -312,7 +307,6 @@
                             <Trigger Property="IsChecked" Value="True">
 
                                 <Setter TargetName="SortButtonBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
-
                                 <Setter TargetName="SortButtonBorder" Property="Background" Value="#394D5F" />
 
                             </Trigger>
@@ -421,7 +415,6 @@
                             <Trigger Property="IsSelected" Value="True">
 
                                 <Setter TargetName="ItemBackground" Property="Background" Value="{StaticResource CardSelectedBrush}" />
-
                                 <Setter TargetName="SelectionBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
 
                             </Trigger>
@@ -573,9 +566,7 @@
                                             <Style TargetType="Thumb">
 
                                                 <Setter Property="Background" Value="{StaticResource ScrollBarThumbBrush}" />
-
                                                 <Setter Property="BorderThickness" Value="0" />
-
                                                 <Setter Property="Margin" Value="2,3" />
 
                                                 <Setter Property="Template">
@@ -1108,9 +1099,26 @@
 
             <Grid>
 
+                <Grid.RowDefinitions>
+
+                    <RowDefinition Height="26" />
+                    <RowDefinition Height="*" />
+
+                </Grid.RowDefinitions>
+
+                <TextBlock
+                    x:Name="ModelCountText"
+                    Grid.Row="0"
+                    Margin="22,5,9,0"
+                    FontSize="12"
+                    FontWeight="SemiBold"
+                    Foreground="{StaticResource PrimaryTextBrush}"
+                    Text="0 models" />
+
                 <ListBox
                     x:Name="FileList"
-                    Padding="9"
+                    Grid.Row="1"
+                    Padding="9,0,9,9"
                     HorizontalContentAlignment="Stretch"
                     Background="Transparent"
                     BorderThickness="0"
@@ -1468,7 +1476,6 @@
                                                 <Style TargetType="Border">
 
                                                     <Setter Property="Visibility" Value="Collapsed" />
-
                                                     <Setter Property="Opacity" Value="0" />
 
                                                     <Style.Triggers>
@@ -1478,13 +1485,11 @@
                                                             <MultiDataTrigger.Conditions>
 
                                                                 <Condition Binding="{Binding IsThumbnailLoaded}" Value="True" />
-
                                                                 <Condition Binding="{Binding IsMouseOver, ElementName=ThumbnailBorder}" Value="True" />
 
                                                             </MultiDataTrigger.Conditions>
 
                                                             <Setter Property="Visibility" Value="Visible" />
-
                                                             <Setter Property="Opacity" Value="1" />
 
                                                         </MultiDataTrigger>
