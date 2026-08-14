@@ -801,7 +801,7 @@ public partial class MainWindow : Window {
                 filteredItems =
                     allFileItems.Where(
                         item =>
-                            item.FileName.Contains(
+                            $"{item.FileName}.io".Contains(
                                 searchText,
                                 StringComparison.OrdinalIgnoreCase));
             }
@@ -823,7 +823,7 @@ public partial class MainWindow : Window {
                             }
 
                             string fileName =
-                                item.FileName;
+                                $"{item.FileName}.io";
 
                             int searchPosition =
                                 0;
