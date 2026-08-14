@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
 using System.Windows.Input;
 
 namespace BrickView;
@@ -765,6 +766,39 @@ public partial class MainWindow : Window {
             return;
         }
 
+        OpenFile(
+            item);
+
+        e.Handled = true;
+    }
+
+    private void OpenInStudio_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not System.Windows.Controls.MenuItem menuItem) {
+            return;
+        }
+
+        if (menuItem.Parent is not ContextMenu contextMenu) {
+            return;
+        }
+
+        if (contextMenu.PlacementTarget
+            is not FrameworkElement element) {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        OpenFile(
+            item);
+    }
+
+    private void OpenFile(
+        IoFileListItem item) {
         if (item.HasError) {
             return;
         }
@@ -775,12 +809,129 @@ public partial class MainWindow : Window {
                     FileName = item.FilePath,
                     UseShellExecute = true
                 });
-
-            e.Handled = true;
         }
         catch (Exception exception) {
             MessageBox.Show(
                 $"Could not open the file.\n\n{exception.Message}",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void ShowInFileExplorer_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not System.Windows.Controls.MenuItem menuItem) {
+            return;
+        }
+
+        if (menuItem.Parent is not ContextMenu contextMenu) {
+            return;
+        }
+
+        if (contextMenu.PlacementTarget
+            is not FrameworkElement element) {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        if (!File.Exists(
+                item.FilePath)) {
+            MessageBox.Show(
+                "The file no longer exists.",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+
+            return;
+        }
+
+        try {
+            Process.Start(
+                new ProcessStartInfo {
+                    FileName = "explorer.exe",
+                    Arguments =
+                        $"/select,\"{item.FilePath}\"",
+                    UseShellExecute = true
+                });
+        }
+        catch (Exception exception) {
+            MessageBox.Show(
+                $"Could not open File Explorer.\n\n{exception.Message}",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyFilePath_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not System.Windows.Controls.MenuItem menuItem) {
+            return;
+        }
+
+        if (menuItem.Parent is not ContextMenu contextMenu) {
+            return;
+        }
+
+        if (contextMenu.PlacementTarget
+            is not FrameworkElement element) {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        try {
+            Clipboard.SetText(
+                item.FilePath);
+        }
+        catch (Exception exception) {
+            MessageBox.Show(
+                $"Could not copy the file path.\n\n{exception.Message}",
+                "BrickView",
+                MessageBoxButton.OK,
+                MessageBoxImage.Error);
+        }
+    }
+
+    private void CopyFileName_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not System.Windows.Controls.MenuItem menuItem) {
+            return;
+        }
+
+        if (menuItem.Parent is not ContextMenu contextMenu) {
+            return;
+        }
+
+        if (contextMenu.PlacementTarget
+            is not FrameworkElement element) {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        try {
+            Clipboard.SetText(
+                Path.GetFileName(
+                    item.FilePath));
+        }
+        catch (Exception exception) {
+            MessageBox.Show(
+                $"Could not copy the file name.\n\n{exception.Message}",
                 "BrickView",
                 MessageBoxButton.OK,
                 MessageBoxImage.Error);

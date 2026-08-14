@@ -715,6 +715,24 @@
                                     MouseLeftButtonUp="Thumbnail_MouseLeftButtonUp"
                                     SnapsToDevicePixels="True">
 
+                                    <Border.ContextMenu>
+
+                                        <ContextMenu>
+
+                                            <MenuItem Click="OpenInStudio_Click" Header="Open in Studio" />
+
+                                            <MenuItem Click="ShowInFileExplorer_Click" Header="Show in File Explorer" />
+
+                                            <Separator />
+
+                                            <MenuItem Click="CopyFilePath_Click" Header="Copy file path" />
+
+                                            <MenuItem Click="CopyFileName_Click" Header="Copy file name" />
+
+                                        </ContextMenu>
+
+                                    </Border.ContextMenu>
+
                                     <Grid ClipToBounds="True">
 
                                         <Image
