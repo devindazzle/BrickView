@@ -441,7 +441,7 @@
             <Setter Property="Background" Value="#2A2D34" />
             <Setter Property="BorderBrush" Value="#4A4D52" />
             <Setter Property="BorderThickness" Value="1" />
-            <Setter Property="Padding" Value="5" />
+            <Setter Property="Padding" Value="8" />
             <Setter Property="HasDropShadow" Value="True" />
 
             <Setter Property="Template">
@@ -471,13 +471,13 @@
 
         <Style x:Key="BrickViewContextMenuItemStyle" TargetType="MenuItem">
 
-            <Setter Property="Height" Value="34" />
-            <Setter Property="Padding" Value="10,0" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="FontSize" Value="12" />
+            <Setter Property="Height" Value="36" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
+            <Setter Property="Padding" Value="10,0" />
+            <Setter Property="FontSize" Value="12" />
 
             <Setter Property="Template">
 
@@ -505,14 +505,6 @@
 
                                 <Setter TargetName="MenuItemBorder" Property="Background" Value="#394D5F" />
 
-                                <Setter Property="Foreground" Value="{StaticResource PrimaryTextBrush}" />
-
-                            </Trigger>
-
-                            <Trigger Property="IsPressed" Value="True">
-
-                                <Setter TargetName="MenuItemBorder" Property="Background" Value="#4A6075" />
-
                             </Trigger>
 
                             <Trigger Property="IsEnabled" Value="False">
@@ -534,7 +526,7 @@
         <Style x:Key="BrickViewContextMenuSeparatorStyle" TargetType="Separator">
 
             <Setter Property="Height" Value="1" />
-            <Setter Property="Margin" Value="5,4" />
+            <Setter Property="Margin" Value="6,6" />
             <Setter Property="Background" Value="#4A4D52" />
 
             <Setter Property="Template">
