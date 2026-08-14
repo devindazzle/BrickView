@@ -6,11 +6,12 @@ public sealed class MetadataLoader
 
     public MetadataLoader()
     {
-        reader = new IoFileReader();
+        reader =
+            new IoFileReader();
     }
 
     public Task<IoModelMetadata?> LoadAsync(string filePath)
-    {
+    { 
         return Task.Run(
             () => reader.ReadMetadata(
                 filePath));

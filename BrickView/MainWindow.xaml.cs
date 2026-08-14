@@ -50,6 +50,8 @@ public partial class MainWindow : Window
 
     private readonly MetadataLoader metadataLoader;
 
+    private readonly HashSet<IoFileListItem> metadataLoadingItems;
+
     private readonly List<IoFileListItem> allFileItems;
 
     private string? currentFolder;
@@ -80,6 +82,9 @@ public partial class MainWindow : Window
 
         metadataLoader =
             new MetadataLoader();
+
+        metadataLoadingItems =
+            new HashSet<IoFileListItem>();
 
         allFileItems =
             new List<IoFileListItem>();
@@ -302,6 +307,8 @@ public partial class MainWindow : Window
     {
         allFileItems.Clear();
 
+        metadataLoadingItems.Clear();
+
         FileList.Items.Clear();
 
         NoResultsText.Visibility =
@@ -352,6 +359,8 @@ public partial class MainWindow : Window
             folderWatcher.Stop();
 
             allFileItems.Clear();
+
+            metadataLoadingItems.Clear();
 
             FileList.Items.Clear();
 
@@ -471,6 +480,9 @@ public partial class MainWindow : Window
 
         if (item is not null)
         {
+            metadataLoadingItems.Remove(
+                item);
+
             allFileItems.Remove(
                 item);
         }
@@ -680,24 +692,38 @@ public partial class MainWindow : Window
             return;
         }
 
-        long fileSize =
-            item.FileSize;
-
-        DateTime lastWriteTimeUtc =
-            item.LastWriteTimeUtc;
-
-        IoModelMetadata? metadata =
-            await metadataLoader.LoadAsync(
-                item.FilePath);
-
-        if (item.FileSize != fileSize ||
-            item.LastWriteTimeUtc != lastWriteTimeUtc)
+        if (!metadataLoadingItems.Add(
+                item))
         {
             return;
         }
 
-        item.Metadata =
-            metadata;
+        try
+        {
+            long fileSize =
+                item.FileSize;
+
+            DateTime lastWriteTimeUtc =
+                item.LastWriteTimeUtc;
+
+            IoModelMetadata? metadata =
+                await metadataLoader.LoadAsync(
+                    item.FilePath);
+
+            if (item.FileSize != fileSize ||
+                item.LastWriteTimeUtc != lastWriteTimeUtc)
+            {
+                return;
+            }
+
+            item.Metadata =
+                metadata;
+        }
+        finally
+        {
+            metadataLoadingItems.Remove(
+                item);
+        }
     }
 
     private void Thumbnail_MouseLeftButtonUp(
