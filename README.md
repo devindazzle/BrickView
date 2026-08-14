@@ -4,6 +4,8 @@ A fast, visual browser for BrickLink Studio `.io` files.
 
 BrickView lets you browse your BrickLink Studio model library visually using the thumbnails already stored inside your `.io` files.
 
+![BrickView](docs/brickview-screenshot.png)
+
 ## Features
 
 - Browse `.io` files with Studio thumbnails
