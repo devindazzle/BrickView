@@ -34,4 +34,8 @@
     <Content Include="BrickView.ico" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="SharpZipLib" Version="1.4.2" />
+  </ItemGroup>
+
 </Project>
