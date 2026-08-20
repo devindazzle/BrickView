@@ -1,4 +1,24 @@
-﻿using Microsoft.Win32;
+﻿// -----------------------------------------------------------------------------
+// MainWindow.xaml.cs
+//
+// Contains the main BrickView window controller and coordinates folder loading,
+// file watching, sorting, searching, thumbnail loading, metadata loading,
+// tag management and user interactions.
+//
+// Model identity resolution is performed asynchronously so Windows file-system
+// identity lookups do not block the UI while large folders are being loaded.
+// Rename detection uses the stable model identity so the existing
+// IoFileListItem can be retained when a file is renamed.
+//
+// Tag data is provided by one long-lived TagService instance. Tags are loaded
+// into an IoFileListItem only after its stable ModelIdentity has been resolved.
+// Tag lookups use the in-memory tag store and therefore do not perform disk I/O.
+//
+// TagPickerControl owns the tag-picker UI. MainWindow only supplies the target
+// model and the shared TagService to that control.
+// -----------------------------------------------------------------------------
+
+using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
 using System.Windows;
@@ -52,6 +72,10 @@ public partial class MainWindow : Window {
 
     private readonly WindowStateService windowStateService;
 
+    private readonly WindowsFileIdentityProvider fileIdentityProvider;
+
+    private readonly TagService tagService;
+
     private readonly HashSet<IoFileListItem> metadataLoadingItems;
 
     private readonly List<IoFileListItem> allFileItems;
@@ -61,6 +85,8 @@ public partial class MainWindow : Window {
     private string? restoredFolder;
 
     private CancellationTokenSource? folderRefreshCancellation;
+
+    private CancellationTokenSource? modelIdentityCancellation;
 
     private SortField currentSortField =
         SortField.FileName;
@@ -141,8 +167,28 @@ public partial class MainWindow : Window {
         thumbnailLoader =
             new ThumbnailLoader(360);
 
+        // The identity provider is shared by both the initial model identity
+        // loading and the folder diff service used for rename detection.
+        fileIdentityProvider =
+            new WindowsFileIdentityProvider();
+
         folderDiffService =
-            new FolderDiffService();
+            new FolderDiffService(
+                fileIdentityProvider);
+
+        TagPersistenceService tagPersistenceService =
+            new TagPersistenceService();
+
+        // Keep one TagService instance for the lifetime of the window so all
+        // cards use the same in-memory tag catalog and model-tag relationships.
+        tagService =
+            new TagService(
+                tagPersistenceService);
+
+        // The picker is shared by all model cards. It receives the same
+        // TagService instance used by MainWindow.
+        TagPicker.TagService =
+            tagService;
 
         folderWatcher =
             new IoFolderWatcher();
@@ -407,6 +453,16 @@ public partial class MainWindow : Window {
 
     private async Task LoadIoFilesAsync(
         string folder) {
+        // A new folder load invalidates outstanding identity lookups for the
+        // previous folder. Existing background operations therefore cannot
+        // update items that no longer belong to the current view.
+        modelIdentityCancellation?.Cancel();
+
+        modelIdentityCancellation?.Dispose();
+
+        modelIdentityCancellation =
+            new CancellationTokenSource();
+
         allFileItems.Clear();
 
         metadataLoadingItems.Clear();
@@ -497,7 +553,7 @@ public partial class MainWindow : Window {
             allFileItems.ToList();
 
         FolderDiff diff =
-            folderDiffService.Compare(
+            await folderDiffService.CompareAsync(
                 existingItems,
                 currentFiles);
 
@@ -525,6 +581,14 @@ public partial class MainWindow : Window {
 
                     break;
 
+                case FileChangeType.Renamed:
+
+                    UpdateRenamedFile(
+                        change.PreviousFilePath,
+                        change.FilePath);
+
+                    break;
+
                 case FileChangeType.Unchanged:
 
                     break;
@@ -534,8 +598,6 @@ public partial class MainWindow : Window {
         SortAllFileItems();
 
         ApplySearchFilter();
-
-        await Task.CompletedTask;
     }
 
     private void AddFileListItem(
@@ -565,6 +627,105 @@ public partial class MainWindow : Window {
 
         allFileItems.Add(
             item);
+
+        CancellationToken cancellationToken =
+            modelIdentityCancellation?.Token ??
+            CancellationToken.None;
+
+        // Identity resolution is deliberately started in the background.
+        // Creating the visible file item therefore does not wait for a
+        // Windows file-system identity lookup.
+        _ = LoadModelIdentityAsync(
+            item,
+            cancellationToken);
+    }
+
+    private async Task LoadModelIdentityAsync(
+        IoFileListItem item,
+        CancellationToken cancellationToken) {
+        try {
+            ModelIdentity? modelIdentity =
+                await Task.Run(
+                    () =>
+                        fileIdentityProvider.TryGetIdentity(
+                            item.FilePath),
+                    cancellationToken);
+
+            if (cancellationToken.IsCancellationRequested ||
+                modelIdentity is null) {
+                return;
+            }
+
+            // The item may have been removed while the background operation
+            // was running. Do not attach the result to an item that is no
+            // longer part of the current folder view.
+            if (!allFileItems.Contains(item)) {
+                return;
+            }
+
+            item.SetModelIdentity(
+                modelIdentity);
+
+            // TagService keeps tag data in memory, so loading the tags for a
+            // model does not perform disk I/O and does not need its own
+            // asynchronous operation. The lookup only runs after the stable
+            // model identity has been resolved.
+            item.SetTags(
+                tagService.GetTags(
+                    modelIdentity));
+        }
+        catch (OperationCanceledException) {
+            // Expected when a folder reload or application shutdown cancels
+            // an outstanding identity lookup.
+        }
+    }
+
+    private void UpdateRenamedFile(
+        string? previousFilePath,
+        string newFilePath) {
+        if (string.IsNullOrWhiteSpace(
+                previousFilePath)) {
+            return;
+        }
+
+        IoFileListItem? item =
+            allFileItems
+                .FirstOrDefault(
+                    existingItem =>
+                        string.Equals(
+                            existingItem.FilePath,
+                            previousFilePath,
+                            StringComparison.OrdinalIgnoreCase));
+
+        if (item is null ||
+            !File.Exists(
+                newFilePath)) {
+            return;
+        }
+
+        FileInfo fileInfo =
+            new FileInfo(
+                newFilePath);
+
+        // Keep the existing IoFileListItem so any tag data associated with the
+        // model remains attached to the same object.
+        item.UpdateFilePath(
+            newFilePath,
+            fileInfo.Length,
+            fileInfo.CreationTimeUtc,
+            fileInfo.LastWriteTimeUtc);
+
+        item.InvalidateThumbnail();
+
+        item.InvalidateMetadata();
+
+        CancellationToken cancellationToken =
+            modelIdentityCancellation?.Token ??
+            CancellationToken.None;
+
+        _ = LoadModelIdentityAsync(
+            item,
+            cancellationToken);
     }
 
     private void RemoveFileListItem(
@@ -619,6 +780,61 @@ public partial class MainWindow : Window {
         item.InvalidateThumbnail();
 
         item.InvalidateMetadata();
+    }
+
+    private void AddTagButton_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not Button button) {
+            return;
+        }
+
+        if (button.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        // The shared picker is positioned relative to the specific plus
+        // button that the user clicked.
+        TagPicker.OpenFor(
+            button,
+            item);
+
+        e.Handled = true;
+    }
+
+    private void RemoveTag_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not Button button) {
+            return;
+        }
+
+        if (button.DataContext
+            is not TagDefinition tag) {
+            return;
+        }
+
+        if (button.Tag is not IoFileListItem item) {
+            return;
+        }
+
+        if (item.ModelIdentity is null) {
+            return;
+        }
+
+        bool removed =
+            tagService.RemoveTag(
+                item.ModelIdentity,
+                tag.Name);
+
+        if (removed) {
+            item.SetTags(
+                tagService.GetTags(
+                    item.ModelIdentity));
+        }
+
+        e.Handled = true;
     }
 
     private void SortFileName_Click(
@@ -968,6 +1184,7 @@ public partial class MainWindow : Window {
             index++) {
             if (FileList.Items[index]
                 is IoFileListItem item) {
+
                 _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Visible);
@@ -995,6 +1212,7 @@ public partial class MainWindow : Window {
             index++) {
             if (FileList.Items[index]
                 is IoFileListItem item) {
+
                 _ = thumbnailLoader.LoadAsync(
                     item,
                     ThumbnailLoadPriority.Preload);
@@ -1038,7 +1256,7 @@ public partial class MainWindow : Window {
         }
     }
 
-    private void Thumbnail_MouseLeftButtonUp(
+    private void Thumbnail_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e) {
         if (sender is not FrameworkElement element) {
@@ -1258,23 +1476,27 @@ public partial class MainWindow : Window {
             await RefreshCurrentFolderAsync();
         }
         catch (OperationCanceledException) {
-            // Expected when a new file system event
-            // resets the debounce timer.
+            // Expected when a new file system event resets
+            // the debounce timer.
         }
     }
 
     private FileSortField GetFileSortField() {
         switch (currentSortField) {
             case SortField.FileName:
+
                 return FileSortField.FileName;
 
             case SortField.CreatedDate:
+
                 return FileSortField.CreatedDate;
 
             case SortField.ModifiedDate:
+
                 return FileSortField.ModifiedDate;
 
             default:
+
                 return FileSortField.FileName;
         }
     }
@@ -1291,6 +1513,10 @@ public partial class MainWindow : Window {
         folderRefreshCancellation?.Cancel();
 
         folderRefreshCancellation?.Dispose();
+
+        modelIdentityCancellation?.Cancel();
+
+        modelIdentityCancellation?.Dispose();
 
         thumbnailSizeManager.SizeChanged -=
             ThumbnailSizeManager_SizeChanged;

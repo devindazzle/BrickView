@@ -1,14 +1,26 @@
-﻿namespace BrickView;
+﻿// -----------------------------------------------------------------------------
+// ThumbnailSizeDefinition.cs
+//
+// Defines the available thumbnail size presets used by BrickView.
+//
+// Each preset contains:
+// - Thumbnail dimensions
+// - Card dimensions
+// - Virtualized item dimensions
+//
+// Card and item heights include the additional vertical space required by the
+// model card content below the thumbnail.
+// -----------------------------------------------------------------------------
 
-public enum ThumbnailSizePreset
-{
+namespace BrickView;
+
+public enum ThumbnailSizePreset {
     Small,
     Medium,
     Large
 }
 
-public sealed class ThumbnailSizeDefinition
-{
+public sealed class ThumbnailSizeDefinition {
     public ThumbnailSizeDefinition(
         ThumbnailSizePreset preset,
         double thumbnailWidth,
@@ -16,8 +28,7 @@ public sealed class ThumbnailSizeDefinition
         double cardWidth,
         double cardHeight,
         double itemWidth,
-        double itemHeight)
-    {
+        double itemHeight) {
         Preset = preset;
         ThumbnailWidth = thumbnailWidth;
         ThumbnailHeight = thumbnailHeight;
@@ -27,46 +38,37 @@ public sealed class ThumbnailSizeDefinition
         ItemHeight = itemHeight;
     }
 
-    public ThumbnailSizePreset Preset
-    {
+    public ThumbnailSizePreset Preset {
         get;
     }
 
-    public double ThumbnailWidth
-    {
+    public double ThumbnailWidth {
         get;
     }
 
-    public double ThumbnailHeight
-    {
+    public double ThumbnailHeight {
         get;
     }
 
-    public double CardWidth
-    {
+    public double CardWidth {
         get;
     }
 
-    public double CardHeight
-    {
+    public double CardHeight {
         get;
     }
 
-    public double ItemWidth
-    {
+    public double ItemWidth {
         get;
     }
 
-    public double ItemHeight
-    {
+    public double ItemHeight {
         get;
     }
 }
 
-public static class ThumbnailSizes
-{
-    public static ThumbnailSizeDefinition Small
-    {
+public static class ThumbnailSizes {
+    public static ThumbnailSizeDefinition Small {
         get;
     } =
         new ThumbnailSizeDefinition(
@@ -74,12 +76,11 @@ public static class ThumbnailSizes
             240,
             160,
             240,
-            210,
+            234,
             258,
-            230);
+            254);
 
-    public static ThumbnailSizeDefinition Medium
-    {
+    public static ThumbnailSizeDefinition Medium {
         get;
     } =
         new ThumbnailSizeDefinition(
@@ -87,12 +88,11 @@ public static class ThumbnailSizes
             360,
             240,
             360,
-            290,
+            314,
             378,
-            310);
+            334);
 
-    public static ThumbnailSizeDefinition Large
-    {
+    public static ThumbnailSizeDefinition Large {
         get;
     } =
         new ThumbnailSizeDefinition(
@@ -100,7 +100,7 @@ public static class ThumbnailSizes
             480,
             320,
             480,
-            370,
+            394,
             498,
-            390);
+            414);
 }
