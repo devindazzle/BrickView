@@ -48,7 +48,7 @@ Finds models where either the model name or one of its tags contains `castle`.
 
 Search is case-insensitive.
 
-### Search by name
+#### Search by name
 
 Use `name:` to search only model names.
 
@@ -58,7 +58,7 @@ name:castle
 
 This will find models whose name contains `castle`, but will not match a tag containing `castle`.
 
-### Search by tag
+#### Search by tag
 
 Use `tag:` to search for a specific tag.
 
@@ -68,7 +68,7 @@ tag:space
 
 This finds models that have the `space` tag.
 
-### Favorites
+#### Favorites
 
 Use `is:favorite` to show only favorite models.
 
@@ -82,7 +82,7 @@ You can also search for models that are **not** marked as favorites:
 is:not-favorite
 ```
 
-### Excluding results
+#### Excluding results
 
 Prefix a search criterion with `-` to exclude matching models.
 
@@ -153,7 +153,7 @@ or:
 tag:"black falcon"
 ```
 
-### Search syntax overview
+#### Search syntax overview
 
 | Syntax                | Description                         |
 | --------------------- | ----------------------------------- |
@@ -168,7 +168,7 @@ tag:"black falcon"
 | `name:"black falcon"` | Search for a phrase in model names  |
 | `tag:"black falcon"`  | Search for a phrase in tags         |
 
-### Combining criteria
+#### Combining criteria
 
 Search criteria can be combined freely:
 
@@ -185,7 +185,6 @@ is:favorite -tag:modern
 ```
 
 The more criteria you combine, the more specific your search becomes.
-
 
 ### Tags
 
