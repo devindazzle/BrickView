@@ -1,7 +1,9 @@
 ﻿// -----------------------------------------------------------------------------
 // MainWindow.Thumbnails.cs
 //
-// Contains the thumbnail-size handling, viewport loading and metadata loading for BrickView's MainWindow partial class.
+// Contains thumbnail-size handling and viewport-driven thumbnail loading for
+// BrickView's MainWindow partial class.
+//
 // This file is an organizational split only; application behavior is unchanged.
 // -----------------------------------------------------------------------------
 
@@ -200,42 +202,4 @@ public partial class MainWindow : Window {
             }
         }
     }
-
-    /// <summary>
-    /// Loads metadata for a model when it has not already been loaded and discards
-    /// stale results if the underlying file changed while loading was in progress.
-    /// </summary>
-    /// <param name="item">The model-list item whose metadata should be loaded.</param>
-    /// <returns>A task representing the asynchronous metadata load.</returns>
-    private async Task LoadMetadataAsync(
-        IoFileListItem item) {
-        if (item.Metadata is not null) {
-            return;
-        }
-
-        try {
-            long fileSize =
-                item.FileSize;
-
-            DateTime lastWriteTimeUtc =
-                item.LastWriteTimeUtc;
-
-            IoModelMetadata? metadata =
-                await metadataLoader.LoadAsync(
-                    item.FilePath);
-
-            if (item.FileSize != fileSize ||
-                item.LastWriteTimeUtc != lastWriteTimeUtc) {
-                return;
-            }
-
-            item.Metadata =
-                metadata;
-        }
-        catch (Exception) {
-            // Metadata loading failures are intentionally ignored here.
-            // The existing model remains usable without metadata.
-        }
-    }
-
 }
