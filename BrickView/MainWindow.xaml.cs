@@ -16,6 +16,9 @@
 //
 // TagPickerControl owns the tag-picker UI. MainWindow only supplies the target
 // model and the shared TagService to that control.
+//
+// Search interpretation is handled by SmartSearchQuery and SmartSearchEngine.
+// MainWindow only coordinates the search UI and applies the resulting filter.
 // -----------------------------------------------------------------------------
 
 using Microsoft.Win32;
@@ -24,6 +27,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Threading;
 
 namespace BrickView;
 
@@ -76,6 +80,8 @@ public partial class MainWindow : Window {
 
     private readonly TagService tagService;
 
+    private readonly SmartSearchEngine smartSearchEngine;
+
     private readonly HashSet<IoFileListItem> metadataLoadingItems;
 
     private readonly List<IoFileListItem> allFileItems;
@@ -87,6 +93,13 @@ public partial class MainWindow : Window {
     private CancellationTokenSource? folderRefreshCancellation;
 
     private CancellationTokenSource? modelIdentityCancellation;
+
+    private bool favoriteFilterEnabled;
+
+    private SmartSearchQuery currentSearchQuery =
+        SmartSearchQuery.Empty;
+
+    private bool searchRefreshPending;
 
     private SortField currentSortField =
         SortField.FileName;
@@ -185,6 +198,9 @@ public partial class MainWindow : Window {
             new TagService(
                 tagPersistenceService);
 
+        smartSearchEngine =
+            new SmartSearchEngine();
+
         // The picker is shared by all model cards. It receives the same
         // TagService instance used by MainWindow.
         TagPicker.TagService =
@@ -211,6 +227,9 @@ public partial class MainWindow : Window {
             SearchTextBox_PreviewKeyDown;
 
         UpdateSortMenu();
+
+        FavoriteFilterButton.ToolTip =
+            "Show favorites only";
     }
 
     public double ThumbnailWidth {
@@ -453,9 +472,6 @@ public partial class MainWindow : Window {
 
     private async Task LoadIoFilesAsync(
         string folder) {
-        // A new folder load invalidates outstanding identity lookups for the
-        // previous folder. Existing background operations therefore cannot
-        // update items that no longer belong to the current view.
         modelIdentityCancellation?.Cancel();
 
         modelIdentityCancellation?.Dispose();
@@ -656,9 +672,6 @@ public partial class MainWindow : Window {
                 return;
             }
 
-            // The item may have been removed while the background operation
-            // was running. Do not attach the result to an item that is no
-            // longer part of the current folder view.
             if (!allFileItems.Contains(item)) {
                 return;
             }
@@ -666,13 +679,22 @@ public partial class MainWindow : Window {
             item.SetModelIdentity(
                 modelIdentity);
 
-            // TagService keeps tag data in memory, so loading the tags for a
-            // model does not perform disk I/O and does not need its own
-            // asynchronous operation. The lookup only runs after the stable
-            // model identity has been resolved.
             item.SetTags(
                 tagService.GetTags(
                     modelIdentity));
+
+            item.IsFavorite =
+                tagService.IsFavorite(
+                    modelIdentity);
+
+            // A plain model list does not depend on model identity, tags or
+            // favorite state. Avoid rebuilding the ListBox for every model
+            // while the initial identity lookups complete. Search is refreshed
+            // only when an active search or favorite filter actually depends
+            // on this information.
+            if (HasActiveSearchFilter()) {
+                RequestSearchRefresh();
+            }
         }
         catch (OperationCanceledException) {
             // Expected when a folder reload or application shutdown cancels
@@ -707,8 +729,6 @@ public partial class MainWindow : Window {
             new FileInfo(
                 newFilePath);
 
-        // Keep the existing IoFileListItem so any tag data associated with the
-        // model remains attached to the same object.
         item.UpdateFilePath(
             newFilePath,
             fileInfo.Length,
@@ -782,6 +802,42 @@ public partial class MainWindow : Window {
         item.InvalidateMetadata();
     }
 
+    private void FavoriteIndicator_MouseLeftButtonDown(
+        object sender,
+        MouseButtonEventArgs e) {
+        if (sender is not FrameworkElement element) {
+            return;
+        }
+
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        if (item.ModelIdentity is null) {
+            return;
+        }
+
+        bool newFavoriteState =
+            !item.IsFavorite;
+
+        bool changed =
+            tagService.SetFavorite(
+                item.ModelIdentity,
+                newFavoriteState);
+
+        if (changed) {
+            item.IsFavorite =
+                newFavoriteState;
+        }
+
+        e.Handled = true;
+
+        if (favoriteFilterEnabled) {
+            ApplySearchFilter();
+        }
+    }
+
     private void AddTagButton_Click(
         object sender,
         RoutedEventArgs e) {
@@ -794,8 +850,6 @@ public partial class MainWindow : Window {
             return;
         }
 
-        // The shared picker is positioned relative to the specific plus
-        // button that the user clicked.
         TagPicker.OpenFor(
             button,
             item);
@@ -832,6 +886,10 @@ public partial class MainWindow : Window {
             item.SetTags(
                 tagService.GetTags(
                     item.ModelIdentity));
+
+            if (!currentSearchQuery.IsEmpty) {
+                RequestSearchRefresh();
+            }
         }
 
         e.Handled = true;
@@ -1013,70 +1071,23 @@ public partial class MainWindow : Window {
     }
 
     private void ApplySearchFilter() {
-        string searchText =
-            SearchTextBox.Text.Trim();
+        SmartSearchQuery query =
+            currentSearchQuery;
 
         IEnumerable<IoFileListItem> filteredItems =
             allFileItems;
 
-        if (!string.IsNullOrEmpty(
-                searchText)) {
-
-            if (!searchText.Contains(
-                    '*',
-                    StringComparison.Ordinal)) {
-
-                filteredItems =
-                    allFileItems.Where(
-                        item =>
-                            $"{item.FileName}.io".Contains(
-                                searchText,
-                                StringComparison.OrdinalIgnoreCase));
-            }
-            else {
-
-                string[] searchParts =
-                    searchText
-                        .Split('*')
-                        .Where(
-                            part =>
-                                !string.IsNullOrEmpty(part))
-                        .ToArray();
-
-                filteredItems =
-                    allFileItems.Where(
-                        item => {
-                            if (searchParts.Length == 0) {
-                                return true;
-                            }
-
-                            string fileName =
-                                $"{item.FileName}.io";
-
-                            int searchPosition =
-                                0;
-
-                            foreach (string searchPart
-                                     in searchParts) {
-                                int matchPosition =
-                                    fileName.IndexOf(
-                                        searchPart,
-                                        searchPosition,
-                                        StringComparison.OrdinalIgnoreCase);
-
-                                if (matchPosition < 0) {
-                                    return false;
-                                }
-
-                                searchPosition =
-                                    matchPosition +
-                                    searchPart.Length;
-                            }
-
-                            return true;
-                        });
-            }
+        if (favoriteFilterEnabled) {
+            filteredItems =
+                filteredItems.Where(
+                    item =>
+                        item.IsFavorite);
         }
+
+        filteredItems =
+            smartSearchEngine.Search(
+                filteredItems,
+                query);
 
         List<IoFileListItem> visibleItems =
             filteredItems.ToList();
@@ -1105,15 +1116,54 @@ public partial class MainWindow : Window {
                 $"{visibleCount} of {totalCount} models";
         }
 
-        if (!string.IsNullOrEmpty(searchText)
-            && visibleItems.Count == 0) {
-            NoResultsText.Visibility =
-                Visibility.Visible;
+        bool hasActiveFilter =
+            favoriteFilterEnabled ||
+            !query.IsEmpty;
+
+        NoResultsText.Visibility =
+            hasActiveFilter &&
+            visibleItems.Count == 0
+                ? Visibility.Visible
+                : Visibility.Collapsed;
+    }
+
+    private void FavoriteFilterButton_Click(
+        object sender,
+        RoutedEventArgs e) {
+        favoriteFilterEnabled =
+            FavoriteFilterButton.IsChecked == true;
+
+        FavoriteFilterButton.ToolTip =
+            favoriteFilterEnabled
+                ? "Show all models"
+                : "Show favorites only";
+
+        ApplySearchFilter();
+    }
+
+    private bool HasActiveSearchFilter() {
+        return favoriteFilterEnabled ||
+               !currentSearchQuery.IsEmpty;
+    }
+
+    private void RequestSearchRefresh() {
+        if (!HasActiveSearchFilter() ||
+            searchRefreshPending) {
+            return;
         }
-        else {
-            NoResultsText.Visibility =
-                Visibility.Collapsed;
-        }
+
+        searchRefreshPending =
+            true;
+
+        Dispatcher.BeginInvoke(
+            new Action(
+                () => {
+                    searchRefreshPending =
+                        false;
+
+                    ApplySearchFilter();
+                }),
+            DispatcherPriority.Background);
     }
 
     private string CreateModelCountText(
@@ -1126,6 +1176,10 @@ public partial class MainWindow : Window {
     private void SearchTextBox_TextChanged(
         object sender,
         System.Windows.Controls.TextChangedEventArgs e) {
+        currentSearchQuery =
+            SmartSearchQuery.Parse(
+                SearchTextBox.Text);
+
         ApplySearchFilter();
     }
 
@@ -1226,11 +1280,6 @@ public partial class MainWindow : Window {
             return;
         }
 
-        if (!metadataLoadingItems.Add(
-                item)) {
-            return;
-        }
-
         try {
             long fileSize =
                 item.FileSize;
@@ -1250,9 +1299,9 @@ public partial class MainWindow : Window {
             item.Metadata =
                 metadata;
         }
-        finally {
-            metadataLoadingItems.Remove(
-                item);
+        catch (Exception) {
+            // Metadata loading failures are intentionally ignored here.
+            // The existing model remains usable without metadata.
         }
     }
 

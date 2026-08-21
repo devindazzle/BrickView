@@ -1,18 +1,23 @@
 ﻿// -----------------------------------------------------------------------------
 // TagService.cs
 //
-// Provides the runtime business logic for BrickView's tag system.
+// Provides the runtime business logic for BrickView's tag system and
+// model-level metadata.
 //
-// The service keeps tag data in memory so tag lookups never require disk I/O.
-// Persistent storage is handled by TagPersistenceService.
+// The service keeps tag data and Favorite state in memory so lookups never
+// require disk I/O. Persistent storage is handled by TagPersistenceService.
 //
 // Responsibilities include:
 // - Managing the reusable tag catalog.
 // - Managing model-to-tag relationships.
+// - Managing model Favorite state.
 // - Enforcing the maximum of three tags per model.
 // - Normalizing tags through TagDefinition.
-// - Persisting changes to the tag store.
+// - Persisting model metadata to the tag store.
 // - Removing a tag globally from the tag catalog and every model that uses it.
+//
+// Favorites are model metadata and are deliberately kept separate from tags.
+// Both are persisted using the same stable ModelIdentity-based model entry.
 //
 // Global tag deletion is deliberately handled here rather than in the UI so
 // the operation remains consistent regardless of where it is initiated.
@@ -27,6 +32,8 @@ public sealed class TagService {
 
     private readonly Dictionary<string, ModelTagCollection> modelTags;
 
+    private readonly HashSet<string> favoriteModelIdentities;
+
     public TagService(
         TagPersistenceService persistenceService) {
         ArgumentNullException.ThrowIfNull(
@@ -40,6 +47,10 @@ public sealed class TagService {
 
         modelTags =
             new Dictionary<string, ModelTagCollection>(
+                StringComparer.Ordinal);
+
+        favoriteModelIdentities =
+            new HashSet<string>(
                 StringComparer.Ordinal);
 
         Load();
@@ -80,6 +91,43 @@ public sealed class TagService {
         }
 
         return collection.Tags;
+    }
+
+    public bool IsFavorite(
+        ModelIdentity modelIdentity) {
+        ArgumentNullException.ThrowIfNull(
+            modelIdentity);
+
+        return favoriteModelIdentities.Contains(
+            modelIdentity.Value);
+    }
+
+    public bool SetFavorite(
+        ModelIdentity modelIdentity,
+        bool isFavorite) {
+        ArgumentNullException.ThrowIfNull(
+            modelIdentity);
+
+        bool changed;
+
+        if (isFavorite) {
+            changed =
+                favoriteModelIdentities.Add(
+                    modelIdentity.Value);
+        }
+        else {
+            changed =
+                favoriteModelIdentities.Remove(
+                    modelIdentity.Value);
+        }
+
+        if (!changed) {
+            return false;
+        }
+
+        Save();
+
+        return true;
     }
 
     public bool AddTag(
@@ -237,8 +285,16 @@ public sealed class TagService {
         ArgumentNullException.ThrowIfNull(
             modelIdentity);
 
-        if (!modelTags.Remove(
-                modelIdentity.Value)) {
+        bool removedTags =
+            modelTags.Remove(
+                modelIdentity.Value);
+
+        bool removedFavorite =
+            favoriteModelIdentities.Remove(
+                modelIdentity.Value);
+
+        if (!removedTags &&
+            !removedFavorite) {
             return;
         }
 
@@ -261,17 +317,36 @@ public sealed class TagService {
             return;
         }
 
-        if (!modelTags.TryGetValue(
+        bool changed =
+            false;
+
+        if (modelTags.TryGetValue(
                 oldModelIdentity.Value,
                 out ModelTagCollection? collection)) {
-            return;
+
+            modelTags.Remove(
+                oldModelIdentity.Value);
+
+            modelTags[newModelIdentity.Value] =
+                collection;
+
+            changed =
+                true;
         }
 
-        modelTags.Remove(
-            oldModelIdentity.Value);
+        if (favoriteModelIdentities.Remove(
+                oldModelIdentity.Value)) {
 
-        modelTags[newModelIdentity.Value] =
-            collection;
+            favoriteModelIdentities.Add(
+                newModelIdentity.Value);
+
+            changed =
+                true;
+        }
+
+        if (!changed) {
+            return;
+        }
 
         Save();
     }
@@ -286,13 +361,36 @@ public sealed class TagService {
                 tag.Name);
         }
 
-        foreach (KeyValuePair<string, ModelTagCollection> entry
-                 in modelTags) {
+        HashSet<string> modelIdentities =
+            new HashSet<string>(
+                modelTags.Keys,
+                StringComparer.Ordinal);
+
+        modelIdentities.UnionWith(
+            favoriteModelIdentities);
+
+        foreach (string modelIdentity
+                 in modelIdentities) {
+
+            List<string> tags =
+                modelTags.TryGetValue(
+                    modelIdentity,
+                    out ModelTagCollection? collection)
+                    ? collection.Tags
+                        .Select(
+                            tag =>
+                                tag.Name)
+                        .ToList()
+                    : new List<string>();
+
             store.Models.Add(
                 new ModelTagStoreEntry(
-                    entry.Key,
-                    entry.Value.Tags.Select(
-                        tag => tag.Name)));
+                    modelIdentity,
+                    tags) {
+                    IsFavorite =
+                        favoriteModelIdentities.Contains(
+                            modelIdentity)
+                });
         }
 
         persistenceService.Save(
@@ -312,9 +410,19 @@ public sealed class TagService {
         foreach (ModelTagStoreEntry model
                  in store.Models) {
 
+            if (string.IsNullOrWhiteSpace(
+                    model.ModelId)) {
+                continue;
+            }
+
             ModelIdentity modelIdentity =
                 new ModelIdentity(
                     model.ModelId);
+
+            if (model.IsFavorite) {
+                favoriteModelIdentities.Add(
+                    modelIdentity.Value);
+            }
 
             ModelTagCollection collection =
                 new ModelTagCollection();

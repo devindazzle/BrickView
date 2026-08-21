@@ -9,6 +9,10 @@
 // Legacy tag names are retained for backward compatibility. TagDefinitions
 // stores the newer color information assigned by BrickView.
 //
+// Favorite status is stored as model metadata alongside the model's tags.
+// This keeps Favorites independent from application-level state while using
+// the same stable ModelIdentity-based persistence mechanism.
+//
 // The Normalize method ensures that loaded persistence data always follows
 // BrickView's tag rules.
 // -----------------------------------------------------------------------------
@@ -218,12 +222,17 @@ public sealed class ModelTagStoreEntry {
 
     public List<string> Tags { get; set; }
 
+    public bool IsFavorite { get; set; }
+
     public ModelTagStoreEntry() {
         ModelId =
             string.Empty;
 
         Tags =
             new List<string>();
+
+        IsFavorite =
+            false;
     }
 
     public ModelTagStoreEntry(
@@ -241,6 +250,9 @@ public sealed class ModelTagStoreEntry {
 
         Tags =
             tags.ToList();
+
+        IsFavorite =
+            false;
 
         Normalize();
     }

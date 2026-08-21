@@ -46,6 +46,24 @@ public class IoFileListItem : INotifyPropertyChanged {
         }
     }
 
+    private bool isFavorite;
+
+    public bool IsFavorite {
+        get {
+            return isFavorite;
+        }
+
+        set {
+            if (isFavorite == value) {
+                return;
+            }
+
+            isFavorite = value;
+
+            OnPropertyChanged();
+        }
+    }
+
     private IoModelMetadata? metadata;
 
     public IoModelMetadata? Metadata {
@@ -178,6 +196,7 @@ public class IoFileListItem : INotifyPropertyChanged {
         ModelIdentity = null;
         tags =
             Array.Empty<TagDefinition>();
+        isFavorite = false;
         metadata = null;
         thumbnailStatus = ThumbnailStatus.NotLoaded;
     }

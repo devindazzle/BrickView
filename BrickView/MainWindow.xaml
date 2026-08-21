@@ -42,6 +42,43 @@
         <SolidColorBrush x:Key="ScrollBarThumbBrush" Color="#50515A" />
         <SolidColorBrush x:Key="ScrollBarThumbHoverBrush" Color="#65666F" />
 
+        <!--
+            Favorite sprite sheet.
+            
+            BrickViewFavoriteStates.png contains four 64x64 states in a 2x2
+            layout:
+            
+            [ Normal ] [ Hover ]
+            [ Favorite ] [ Favorite + Hover ]
+            
+            The sprite is cropped here so the model-card UI can switch between
+            the four pre-rendered states without drawing the star in XAML.
+        -->
+        <BitmapImage
+            x:Key="FavoriteSpriteSource"
+            CacheOption="OnLoad"
+            UriSource="pack://application:,,,/Assets/UI/BrickViewFavoriteStates.png" />
+
+        <CroppedBitmap
+            x:Key="FavoriteNormalImage"
+            Source="{StaticResource FavoriteSpriteSource}"
+            SourceRect="0,0,64,64" />
+
+        <CroppedBitmap
+            x:Key="FavoriteHoverImage"
+            Source="{StaticResource FavoriteSpriteSource}"
+            SourceRect="64,0,64,64" />
+
+        <CroppedBitmap
+            x:Key="FavoriteSelectedImage"
+            Source="{StaticResource FavoriteSpriteSource}"
+            SourceRect="0,64,64,64" />
+
+        <CroppedBitmap
+            x:Key="FavoriteSelectedHoverImage"
+            Source="{StaticResource FavoriteSpriteSource}"
+            SourceRect="64,64,64,64" />
+
         <Style x:Key="ToolbarButtonStyle" TargetType="Button">
 
             <Setter Property="Background" Value="#34363A" />
@@ -321,6 +358,76 @@
                                 <Setter TargetName="SortButtonBorder" Property="Background" Value="#394D5F" />
 
                             </Trigger>
+
+                        </ControlTemplate.Triggers>
+
+                    </ControlTemplate>
+
+                </Setter.Value>
+
+            </Setter>
+
+        </Style>
+
+        <Style
+            x:Key="FavoriteFilterButtonStyle"
+            BasedOn="{StaticResource SortButtonStyle}"
+            TargetType="ToggleButton">
+
+            <Setter Property="Width" Value="42" />
+            <Setter Property="Padding" Value="0" />
+
+            <Setter Property="Template">
+
+                <Setter.Value>
+
+                    <ControlTemplate TargetType="ToggleButton">
+
+                        <Border
+                            x:Name="FavoriteFilterBorder"
+                            Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            CornerRadius="4">
+
+                            <ContentPresenter
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center"
+                                Content="{TemplateBinding Content}"
+                                ContentTemplate="{TemplateBinding ContentTemplate}" />
+
+                        </Border>
+
+                        <ControlTemplate.Triggers>
+
+                            <Trigger Property="IsMouseOver" Value="True">
+
+                                <Setter TargetName="FavoriteFilterBorder" Property="Background" Value="#414449" />
+
+                                <Setter TargetName="FavoriteFilterBorder" Property="BorderBrush" Value="#5D6167" />
+
+                            </Trigger>
+
+                            <Trigger Property="IsChecked" Value="True">
+
+                                <Setter TargetName="FavoriteFilterBorder" Property="Background" Value="#394D5F" />
+
+                                <Setter TargetName="FavoriteFilterBorder" Property="BorderBrush" Value="{StaticResource AccentBrush}" />
+
+                            </Trigger>
+
+                            <MultiTrigger>
+
+                                <MultiTrigger.Conditions>
+
+                                    <Condition Property="IsChecked" Value="True" />
+                                    <Condition Property="IsMouseOver" Value="True" />
+
+                                </MultiTrigger.Conditions>
+
+                                <Setter TargetName="FavoriteFilterBorder" Property="Background" Value="#445E72" />
+
+                            </MultiTrigger>
 
                         </ControlTemplate.Triggers>
 
@@ -678,13 +785,26 @@
 
                 </Grid.ColumnDefinitions>
 
-                <TextBlock
+                <StackPanel
                     Grid.Column="0"
                     VerticalAlignment="Center"
-                    FontSize="20"
-                    FontWeight="Bold"
-                    Foreground="{StaticResource PrimaryTextBrush}"
-                    Text="BrickView" />
+                    Orientation="Horizontal">
+
+                    <TextBlock
+                        FontSize="20"
+                        FontWeight="Bold"
+                        Foreground="{StaticResource PrimaryTextBrush}"
+                        Text="BrickView" />
+
+                    <TextBlock
+                        Margin="12,0,0,0"
+                        VerticalAlignment="Center"
+                        FontSize="12"
+                        FontWeight="SemiBold"
+                        Foreground="{StaticResource SecondaryTextBrush}"
+                        Text="{x:Static local:ApplicationVersion.DisplayName}" />
+
+                </StackPanel>
 
                 <TextBlock
                     x:Name="FolderText"
@@ -733,6 +853,7 @@
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                     <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="Auto" />
 
                 </Grid.ColumnDefinitions>
 
@@ -743,8 +864,27 @@
                     Style="{StaticResource SearchTextBoxStyle}" />
 
                 <ToggleButton
-                    x:Name="SortButton"
+                    x:Name="FavoriteFilterButton"
                     Grid.Column="1"
+                    Width="42"
+                    Margin="0,0,8,0"
+                    Click="FavoriteFilterButton_Click"
+                    IsChecked="False"
+                    Style="{StaticResource FavoriteFilterButtonStyle}"
+                    ToolTip="Show favorites only">
+
+                    <TextBlock
+                        HorizontalAlignment="Center"
+                        VerticalAlignment="Center"
+                        FontSize="18"
+                        FontWeight="Bold"
+                        Text="★" />
+
+                </ToggleButton>
+
+                <ToggleButton
+                    x:Name="SortButton"
+                    Grid.Column="2"
                     Margin="0,0,8,0"
                     IsChecked="{Binding IsOpen, ElementName=SortPopup, Mode=TwoWay}"
                     Style="{StaticResource SortButtonStyle}">
@@ -1026,7 +1166,7 @@
                 </Popup>
 
                 <Border
-                    Grid.Column="2"
+                    Grid.Column="3"
                     Height="30"
                     Padding="1"
                     VerticalAlignment="Center"
@@ -1487,7 +1627,6 @@
                                                 <Style TargetType="Border">
 
                                                     <Setter Property="Visibility" Value="Collapsed" />
-
                                                     <Setter Property="Opacity" Value="0" />
 
                                                     <Style.Triggers>
@@ -1497,13 +1636,11 @@
                                                             <MultiDataTrigger.Conditions>
 
                                                                 <Condition Binding="{Binding IsThumbnailLoaded}" Value="True" />
-
                                                                 <Condition Binding="{Binding IsMouseOver, ElementName=ThumbnailBorder}" Value="True" />
 
                                                             </MultiDataTrigger.Conditions>
 
                                                             <Setter Property="Visibility" Value="Visible" />
-
                                                             <Setter Property="Opacity" Value="1" />
 
                                                         </MultiDataTrigger>
@@ -1526,6 +1663,26 @@
                                                     BorderThickness="1"
                                                     CornerRadius="4">
 
+                                                    <Border.Style>
+
+                                                        <Style TargetType="Border">
+
+                                                            <Setter Property="Visibility" Value="Visible" />
+
+                                                            <Style.Triggers>
+
+                                                                <DataTrigger Binding="{Binding IsMouseOver, ElementName=FavoriteIndicator}" Value="True">
+
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+
+                                                                </DataTrigger>
+
+                                                            </Style.Triggers>
+
+                                                        </Style>
+
+                                                    </Border.Style>
+
                                                     <TextBlock
                                                         HorizontalAlignment="Center"
                                                         VerticalAlignment="Center"
@@ -1535,6 +1692,174 @@
                                                         Text="Open file" />
 
                                                 </Border>
+
+                                            </Grid>
+
+                                        </Border>
+
+                                        <Border
+                                            x:Name="FavoriteIndicator"
+                                            Width="30"
+                                            Height="30"
+                                            Margin="0,8,8,0"
+                                            HorizontalAlignment="Right"
+                                            VerticalAlignment="Top"
+                                            Background="Transparent"
+                                            BorderThickness="0"
+                                            Cursor="Hand"
+                                            MouseLeftButtonDown="FavoriteIndicator_MouseLeftButtonDown">
+
+                                            <Grid>
+
+                                                <Image
+                                                    Width="30"
+                                                    Height="30"
+                                                    Source="{StaticResource FavoriteNormalImage}"
+                                                    Stretch="Fill">
+
+                                                    <Image.Style>
+
+                                                        <Style TargetType="Image">
+
+                                                            <Setter Property="Visibility" Value="Visible" />
+
+                                                            <Style.Triggers>
+
+                                                                <DataTrigger Binding="{Binding IsFavorite}" Value="True">
+
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+
+                                                                </DataTrigger>
+
+                                                                <MultiDataTrigger>
+
+                                                                    <MultiDataTrigger.Conditions>
+
+                                                                        <Condition Binding="{Binding IsFavorite}" Value="False" />
+
+                                                                        <Condition Binding="{Binding IsMouseOver, ElementName=FavoriteIndicator}" Value="True" />
+
+                                                                    </MultiDataTrigger.Conditions>
+
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+
+                                                                </MultiDataTrigger>
+
+                                                            </Style.Triggers>
+
+                                                        </Style>
+
+                                                    </Image.Style>
+
+                                                </Image>
+
+                                                <Image
+                                                    Width="30"
+                                                    Height="30"
+                                                    Source="{StaticResource FavoriteHoverImage}"
+                                                    Stretch="Fill">
+
+                                                    <Image.Style>
+
+                                                        <Style TargetType="Image">
+
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                                            <Style.Triggers>
+
+                                                                <MultiDataTrigger>
+
+                                                                    <MultiDataTrigger.Conditions>
+
+                                                                        <Condition Binding="{Binding IsFavorite}" Value="False" />
+
+                                                                        <Condition Binding="{Binding IsMouseOver, ElementName=FavoriteIndicator}" Value="True" />
+
+                                                                    </MultiDataTrigger.Conditions>
+
+                                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                                </MultiDataTrigger>
+
+                                                            </Style.Triggers>
+
+                                                        </Style>
+
+                                                    </Image.Style>
+
+                                                </Image>
+
+                                                <Image
+                                                    Width="30"
+                                                    Height="30"
+                                                    Source="{StaticResource FavoriteSelectedImage}"
+                                                    Stretch="Fill">
+
+                                                    <Image.Style>
+
+                                                        <Style TargetType="Image">
+
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                                            <Style.Triggers>
+
+                                                                <MultiDataTrigger>
+
+                                                                    <MultiDataTrigger.Conditions>
+
+                                                                        <Condition Binding="{Binding IsFavorite}" Value="True" />
+
+                                                                        <Condition Binding="{Binding IsMouseOver, ElementName=FavoriteIndicator}" Value="False" />
+
+                                                                    </MultiDataTrigger.Conditions>
+
+                                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                                </MultiDataTrigger>
+
+                                                            </Style.Triggers>
+
+                                                        </Style>
+
+                                                    </Image.Style>
+
+                                                </Image>
+
+                                                <Image
+                                                    Width="30"
+                                                    Height="30"
+                                                    Source="{StaticResource FavoriteSelectedHoverImage}"
+                                                    Stretch="Fill">
+
+                                                    <Image.Style>
+
+                                                        <Style TargetType="Image">
+
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+
+                                                            <Style.Triggers>
+
+                                                                <MultiDataTrigger>
+
+                                                                    <MultiDataTrigger.Conditions>
+
+                                                                        <Condition Binding="{Binding IsFavorite}" Value="True" />
+
+                                                                        <Condition Binding="{Binding IsMouseOver, ElementName=FavoriteIndicator}" Value="True" />
+
+                                                                    </MultiDataTrigger.Conditions>
+
+                                                                    <Setter Property="Visibility" Value="Visible" />
+
+                                                                </MultiDataTrigger>
+
+                                                            </Style.Triggers>
+
+                                                        </Style>
+
+                                                    </Image.Style>
+
+                                                </Image>
 
                                             </Grid>
 
@@ -1553,11 +1878,6 @@
                                     TextTrimming="CharacterEllipsis"
                                     ToolTip="{Binding FilePath}" />
 
-                                <!--
-                                    Tags are displayed directly after the model
-                                    name. The AddTag button follows the last tag
-                                    in the same horizontal row.
-                                -->
                                 <StackPanel
                                     Height="20"
                                     Margin="2,3,2,0"
@@ -1598,11 +1918,6 @@
 
                                                         </Grid.ColumnDefinitions>
 
-                                                        <!--
-                                                            The tag name is horizontally centered
-                                                            and explicitly centered vertically within
-                                                            the 18 pixel tag height.
-                                                        -->
                                                         <TextBlock
                                                             Grid.Column="0"
                                                             Margin="6,0,3,0"
@@ -1617,12 +1932,6 @@
                                                             TextAlignment="Center"
                                                             TextTrimming="CharacterEllipsis" />
 
-                                                        <!--
-                                                            The remove action remains visible at
-                                                            all times. It is intentionally subtle
-                                                            in the normal state and becomes brighter
-                                                            when the pointer is over the button.
-                                                        -->
                                                         <Button
                                                             Grid.Column="1"
                                                             Width="18"
@@ -1670,7 +1979,6 @@
                                                                                     <Trigger Property="IsMouseOver" Value="True">
 
                                                                                         <Setter TargetName="RemoveTagBorder" Property="Background" Value="#25000000" />
-
                                                                                         <Setter Property="Opacity" Value="1" />
 
                                                                                     </Trigger>
@@ -1714,12 +2022,6 @@
 
                                     </ItemsControl>
 
-                                    <!--
-                                        The add button is styled as a tag and sits
-                                        immediately after the last existing tag.
-                                        It is hidden when the model already has
-                                        three tags.
-                                    -->
                                     <Button
                                         Width="18"
                                         Height="18"
@@ -1770,7 +2072,6 @@
                                                                 <Trigger Property="IsMouseOver" Value="True">
 
                                                                     <Setter TargetName="AddTagBorder" Property="Background" Value="#445E72" />
-
                                                                     <Setter TargetName="AddTagBorder" Property="BorderBrush" Value="#6285A0" />
 
                                                                 </Trigger>
