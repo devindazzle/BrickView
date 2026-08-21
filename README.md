@@ -30,15 +30,162 @@ BrickView lets you browse your BrickLink Studio model library visually using the
 
 BrickView 1.1 adds several features that make it easier to organize and browse larger model libraries.
 
-### Smart Search
+## Smart Search
 
-Find models quickly while typing.
+BrickView includes a powerful Smart Search feature that lets you search models by name, tags, and favorite status.
 
-- Live filtering
-- Case-insensitive search
-- Wildcard `*` support
-- Clear search with `Escape`
-- Works together with folder monitoring and refresh
+Search is performed as you type, and multiple search criteria can be combined. All criteria must match for a model to be included in the results.
+
+### Smart search
+
+Enter any text to search model names and tags.
+
+```text
+castle
+```
+
+Finds models where either the model name or one of its tags contains `castle`.
+
+Search is case-insensitive.
+
+### Search by name
+
+Use `name:` to search only model names.
+
+```text
+name:castle
+```
+
+This will find models whose name contains `castle`, but will not match a tag containing `castle`.
+
+### Search by tag
+
+Use `tag:` to search for a specific tag.
+
+```text
+tag:space
+```
+
+This finds models that have the `space` tag.
+
+### Favorites
+
+Use `is:favorite` to show only favorite models.
+
+```text
+is:favorite
+```
+
+You can also search for models that are **not** marked as favorites:
+
+```text
+is:not-favorite
+```
+
+### Excluding results
+
+Prefix a search criterion with `-` to exclude matching models.
+
+For example:
+
+```text
+-tag:space
+```
+
+This finds models that do not have the `space` tag.
+
+You can also exclude text matches:
+
+```text
+-castle
+```
+
+This excludes models where `castle` appears in the model name or tags.
+
+### Combining searches
+
+Multiple search criteria can be combined. A model must satisfy **all** criteria to appear in the results.
+
+For example:
+
+```text
+castle tag:medieval
+```
+
+Finds models where:
+
+* `castle` appears in the model name or tags
+* the model has the `medieval` tag
+
+Another example:
+
+```text
+name:castle is:favorite
+```
+
+Finds favorite models whose name contains `castle`.
+
+You can combine several criteria:
+
+```text
+name:castle tag:medieval is:favorite
+```
+
+### Quoted searches
+
+Use quotation marks when searching for an exact phrase containing spaces.
+
+```text
+"black falcon"
+```
+
+This searches for the phrase `black falcon` in model names and tags.
+
+Field-specific searches can also use quoted phrases:
+
+```text
+name:"black falcon"
+```
+
+or:
+
+```text
+tag:"black falcon"
+```
+
+### Search syntax overview
+
+| Syntax                | Description                         |
+| --------------------- | ----------------------------------- |
+| `castle`              | Search model names and tags         |
+| `name:castle`         | Search model names only             |
+| `tag:space`           | Search for a specific tag           |
+| `is:favorite`         | Show favorite models                |
+| `is:not-favorite`     | Show non-favorite models            |
+| `-castle`             | Exclude models matching `castle`    |
+| `-tag:space`          | Exclude models with the `space` tag |
+| `"black falcon"`      | Search for a phrase                 |
+| `name:"black falcon"` | Search for a phrase in model names  |
+| `tag:"black falcon"`  | Search for a phrase in tags         |
+
+### Combining criteria
+
+Search criteria can be combined freely:
+
+```text
+tag:castle is:favorite
+```
+
+```text
+name:"black falcon" tag:medieval
+```
+
+```text
+is:favorite -tag:modern
+```
+
+The more criteria you combine, the more specific your search becomes.
+
 
 ### Tags
 
