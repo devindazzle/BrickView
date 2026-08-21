@@ -418,39 +418,6 @@ public sealed class TagService {
     }
 
     /// <summary>
-    /// Removes all persisted metadata associated with the specified model.
-    /// </summary>
-    /// <param name="modelIdentity">
-    /// The stable identity of the model to remove.
-    /// </param>
-    /// <remarks>
-    /// Both tag assignments and Favorite state are removed.
-    /// </remarks>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when <paramref name="modelIdentity"/> is null.
-    /// </exception>
-    public void RemoveModel(
-        ModelIdentity modelIdentity) {
-        ArgumentNullException.ThrowIfNull(
-            modelIdentity);
-
-        bool removedTags =
-            modelTags.Remove(
-                modelIdentity.Value);
-
-        bool removedFavorite =
-            favoriteModelIdentities.Remove(
-                modelIdentity.Value);
-
-        if (!removedTags &&
-            !removedFavorite) {
-            return;
-        }
-
-        Save();
-    }
-
-    /// <summary>
     /// Serializes the current in-memory tag catalog and model metadata and
     /// delegates persistence to <see cref="TagPersistenceService"/>.
     /// </summary>
