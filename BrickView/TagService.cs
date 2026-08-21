@@ -421,7 +421,7 @@ public sealed class TagService {
     /// Serializes the current in-memory tag catalog and model metadata and
     /// delegates persistence to <see cref="TagPersistenceService"/>.
     /// </summary>
-    public void Save() {
+    private void Save() {
         TagStore store =
             new TagStore();
 

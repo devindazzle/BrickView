@@ -1,18 +1,26 @@
 ﻿// -----------------------------------------------------------------------------
 // MainWindow.Folders.cs
 //
-// Contains the folder selection, loading, file-system synchronization and model-list updates for BrickView's MainWindow partial class.
-// This file is an organizational split only; application behavior is unchanged.
+// Contains MainWindow's folder-selection, folder-loading, filesystem-refresh,
+// model-list synchronization and FileSystemWatcher refresh orchestration.
 // -----------------------------------------------------------------------------
 
 using Microsoft.Win32;
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows.Threading;
 
 namespace BrickView;
 
-public partial class MainWindow : Window {
+public partial class MainWindow {
 
     /// <summary>
     /// Opens the folder-selection dialog and loads the selected folder into BrickView.
@@ -88,7 +96,7 @@ public partial class MainWindow : Window {
     /// </summary>
     /// <param name="folder">The folder containing the BrickView model files.</param>
     /// <returns>A completed task after the initial file list has been prepared.</returns>
-    private Task LoadIoFilesAsync(
+    private async Task LoadIoFilesAsync(
         string folder) {
         modelIdentityCancellation?.Cancel();
 
@@ -108,14 +116,8 @@ public partial class MainWindow : Window {
             "0 models";
 
         string[] files =
-            Directory.GetFiles(
-                folder,
-                "*.io",
-                SearchOption.TopDirectoryOnly)
-                .OrderBy(
-                    file => Path.GetFileName(file),
-                    StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            await GetIoFilesAsync(
+                folder);
 
         foreach (string file in files) {
             AddFileListItem(
@@ -125,8 +127,6 @@ public partial class MainWindow : Window {
         SortAllFileItems();
 
         ApplySearchFilter();
-
-        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -179,14 +179,10 @@ public partial class MainWindow : Window {
             Visibility.Collapsed;
 
         string[] currentFiles =
-            Directory.GetFiles(
-                currentFolder,
-                "*.io",
-                SearchOption.TopDirectoryOnly)
-                .OrderBy(
-                    file => Path.GetFileName(file),
-                    StringComparer.OrdinalIgnoreCase)
-                .ToArray();
+            await GetIoFilesAsync(
+                currentFolder);
+
+        cancellationToken.ThrowIfCancellationRequested();
 
         List<IoFileListItem> existingItems =
             allFileItems.ToList();
@@ -243,6 +239,31 @@ public partial class MainWindow : Window {
     }
 
     /// <summary>
+    /// Enumerates the top-level .io files in a folder on a background thread and
+    /// returns them sorted by file name.
+    /// </summary>
+    /// <param name="folder">The folder containing the BrickView model files.</param>
+    /// <returns>A task containing the sorted .io file paths.</returns>
+    /// <remarks>
+    /// Directory enumeration is deliberately kept off the WPF UI thread because
+    /// filesystem access can be noticeably slow for large, network or removable
+    /// folders. The returned paths are later consumed by UI-thread model updates.
+    /// </remarks>
+    private static Task<string[]> GetIoFilesAsync(
+        string folder) {
+        return Task.Run(
+            () =>
+                Directory.GetFiles(
+                    folder,
+                    "*.io",
+                    SearchOption.TopDirectoryOnly)
+                    .OrderBy(
+                        file => Path.GetFileName(file),
+                        StringComparer.OrdinalIgnoreCase)
+                    .ToArray());
+    }
+
+    /// <summary>
     /// Creates and registers a model-list item for an existing .io file and starts
     /// asynchronous model-identity resolution for that item.
     /// </summary>
@@ -254,13 +275,9 @@ public partial class MainWindow : Window {
             return;
         }
 
-        if (!TryGetFileInfo(
-                filePath,
-                out long fileSize,
-                out DateTime creationTimeUtc,
-                out DateTime lastWriteTimeUtc)) {
-            return;
-        }
+        FileInfo fileInfo =
+            new FileInfo(
+                filePath);
 
         string fileName =
             Path.GetFileNameWithoutExtension(
@@ -270,9 +287,9 @@ public partial class MainWindow : Window {
             new IoFileListItem(
                 fileName,
                 filePath,
-                fileSize,
-                creationTimeUtc,
-                lastWriteTimeUtc,
+                fileInfo.Length,
+                fileInfo.CreationTimeUtc,
+                fileInfo.LastWriteTimeUtc,
                 null,
                 null);
 
@@ -373,19 +390,15 @@ public partial class MainWindow : Window {
             return;
         }
 
-        if (!TryGetFileInfo(
-                newFilePath,
-                out long fileSize,
-                out DateTime creationTimeUtc,
-                out DateTime lastWriteTimeUtc)) {
-            return;
-        }
+        FileInfo fileInfo =
+            new FileInfo(
+                newFilePath);
 
         item.UpdateFilePath(
             newFilePath,
-            fileSize,
-            creationTimeUtc,
-            lastWriteTimeUtc);
+            fileInfo.Length,
+            fileInfo.CreationTimeUtc,
+            fileInfo.LastWriteTimeUtc);
 
         item.InvalidateThumbnail();
 
@@ -398,59 +411,6 @@ public partial class MainWindow : Window {
         _ = LoadModelIdentityAsync(
             item,
             cancellationToken);
-    }
-
-    /// <summary>
-    /// Attempts to read the file metadata required by model-list items.
-    /// </summary>
-    /// <param name="filePath">The file whose metadata should be read.</param>
-    /// <param name="fileSize">Receives the file size when the operation succeeds.</param>
-    /// <param name="creationTimeUtc">
-    /// Receives the file creation time in UTC when the operation succeeds.
-    /// </param>
-    /// <param name="lastWriteTimeUtc">
-    /// Receives the last-write time in UTC when the operation succeeds.
-    /// </param>
-    /// <returns>
-    /// True when all requested metadata could be read; otherwise false.
-    /// </returns>
-    private static bool TryGetFileInfo(
-        string filePath,
-        out long fileSize,
-        out DateTime creationTimeUtc,
-        out DateTime lastWriteTimeUtc) {
-        fileSize = 0;
-        creationTimeUtc = default;
-        lastWriteTimeUtc = default;
-
-        try {
-            FileInfo fileInfo =
-                new FileInfo(
-                    filePath);
-
-            fileSize =
-                fileInfo.Length;
-
-            creationTimeUtc =
-                fileInfo.CreationTimeUtc;
-
-            lastWriteTimeUtc =
-                fileInfo.LastWriteTimeUtc;
-
-            return true;
-        }
-        catch (FileNotFoundException) {
-            return false;
-        }
-        catch (DirectoryNotFoundException) {
-            return false;
-        }
-        catch (UnauthorizedAccessException) {
-            return false;
-        }
-        catch (IOException) {
-            return false;
-        }
     }
 
     /// <summary>
@@ -499,18 +459,14 @@ public partial class MainWindow : Window {
             return;
         }
 
-        if (!TryGetFileInfo(
-                filePath,
-                out long fileSize,
-                out DateTime creationTimeUtc,
-                out DateTime lastWriteTimeUtc)) {
-            return;
-        }
+        FileInfo fileInfo =
+            new FileInfo(
+                filePath);
 
         item.UpdateFileInfo(
-            fileSize,
-            creationTimeUtc,
-            lastWriteTimeUtc);
+            fileInfo.Length,
+            fileInfo.CreationTimeUtc,
+            fileInfo.LastWriteTimeUtc);
 
         item.InvalidateThumbnail();
 
@@ -600,5 +556,4 @@ public partial class MainWindow : Window {
                 refreshCancellation);
         }
     }
-
 }

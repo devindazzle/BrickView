@@ -8,6 +8,10 @@
 // models. A queued request can be superseded by a higher-priority request for
 // the same model.
 //
+// Active requests are tracked separately from queued requests so repeated
+// viewport notifications cannot start duplicate thumbnail reads for a model
+// that is already being processed.
+//
 // Each request captures the IoFileListItem thumbnail generation at the time the
 // request is accepted. If the thumbnail is invalidated while the request is
 // loading, IoFileListItem rejects the stale result instead of allowing an older
@@ -40,6 +44,13 @@ public sealed class ThumbnailLoader {
     private readonly Dictionary<
         IoFileListItem,
         ThumbnailLoadPriority> queuedPriorities =
+        new Dictionary<
+            IoFileListItem,
+            ThumbnailLoadPriority>();
+
+    private readonly Dictionary<
+        IoFileListItem,
+        ThumbnailLoadPriority> activePriorities =
         new Dictionary<
             IoFileListItem,
             ThumbnailLoadPriority>();
@@ -94,6 +105,11 @@ public sealed class ThumbnailLoader {
     /// A model that already has a terminal thumbnail state is not queued.
     /// When the same model is already queued, a request is only replaced when
     /// the new request has a higher priority.
+    ///
+    /// When the model is already being processed by a worker, another request
+    /// does not start a second thumbnail read. Instead, a higher-priority
+    /// request is remembered so it can be scheduled again if the active load
+    /// becomes stale.
     /// </remarks>
     public Task LoadAsync(
         IoFileListItem item,
@@ -112,11 +128,30 @@ public sealed class ThumbnailLoader {
                 return Task.CompletedTask;
             }
 
+            // Do not start a second thumbnail read while this item is already
+            // being processed. Remember a higher-priority request so it can
+            // be scheduled after the active request has completed if needed.
+            if (activePriorities.TryGetValue(
+                    item,
+                    out ThumbnailLoadPriority activePriority)) {
+
+                if (priority <
+                    activePriority) {
+
+                    activePriorities[item] =
+                        priority;
+                }
+
+                return Task.CompletedTask;
+            }
+
             if (queuedPriorities.TryGetValue(
                     item,
                     out ThumbnailLoadPriority existingPriority)) {
 
-                if (priority >= existingPriority) {
+                if (priority >=
+                    existingPriority) {
+
                     return Task.CompletedTask;
                 }
 
@@ -198,10 +233,72 @@ public sealed class ThumbnailLoader {
 
                 queuedPriorities.Remove(
                     request.Item);
+
+                // From this point until LoadThumbnailAsync completes, this
+                // model is considered active. Further viewport requests must
+                // not start another concurrent thumbnail read.
+                activePriorities[request.Item] =
+                    request.Priority;
             }
 
-            await LoadThumbnailAsync(
-                request);
+            try {
+                await LoadThumbnailAsync(
+                    request);
+            }
+            finally {
+                lock (queueLock) {
+                    activePriorities.Remove(
+                        request.Item);
+                }
+            }
+
+            // If a new request arrived while the previous request was active,
+            // LoadAsync has already recorded its desired priority. If the
+            // thumbnail generation changed while the active request was
+            // running, schedule a new request using that remembered priority.
+            lock (queueLock) {
+                if (request.Item.ThumbnailGeneration !=
+                    request.ThumbnailGeneration &&
+                    !queuedPriorities.ContainsKey(
+                        request.Item) &&
+                    !activePriorities.ContainsKey(
+                        request.Item) &&
+                    request.Item.ThumbnailStatus !=
+                        ThumbnailStatus.Loaded &&
+                    request.Item.ThumbnailStatus !=
+                        ThumbnailStatus.Missing &&
+                    request.Item.ThumbnailStatus !=
+                        ThumbnailStatus.Error) {
+
+                    ThumbnailLoadPriority retryPriority =
+                        request.Priority;
+
+                    int queuePriority =
+                        ((int)retryPriority * 1_000_000)
+                        + sequenceNumber;
+
+                    sequenceNumber++;
+
+                    ThumbnailLoadRequest retryRequest =
+                        new ThumbnailLoadRequest(
+                            request.Item,
+                            retryPriority,
+                            request.Item.ThumbnailGeneration);
+
+                    queuedPriorities[
+                        request.Item] =
+                        retryPriority;
+
+                    request.Item.ThumbnailStatus =
+                        ThumbnailStatus.Loading;
+
+                    queue.Enqueue(
+                        retryRequest,
+                        queuePriority);
+
+                    queueSignal.Release();
+                }
+            }
         }
     }
 
@@ -211,7 +308,7 @@ public sealed class ThumbnailLoader {
     /// </summary>
     /// <param name="request">
     /// The thumbnail request containing the model and generation that was
-    /// current when the request was queued.
+    /// current when the thumbnail was queued.
     /// </param>
     /// <returns>
     /// A task representing the asynchronous thumbnail loading operation.
@@ -386,7 +483,7 @@ public sealed class ThumbnailLoader {
         /// The model item whose thumbnail should be loaded.
         /// </param>
         /// <param name="priority">
-        /// The priority assigned to the request.
+        /// The priority assigned to the thumbnail request.
         /// </param>
         /// <param name="thumbnailGeneration">
         /// The thumbnail generation associated with the request.
