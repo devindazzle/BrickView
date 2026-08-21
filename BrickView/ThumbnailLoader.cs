@@ -1,27 +1,17 @@
 ﻿// -----------------------------------------------------------------------------
 // ThumbnailLoader.cs
 //
-// Provides asynchronous thumbnail loading for BrickView model items.
+// Loads .io model thumbnails asynchronously using a fixed worker pool and a
+// priority queue.
 //
-// Responsibilities:
-// - Maintains a prioritized queue of thumbnail load requests.
-// - Prevents duplicate requests for the same model item.
-// - Allows higher-priority requests to supersede lower-priority queued requests.
-// - Processes thumbnail requests using a fixed number of background workers.
-// - Reads thumbnail data from .io files through IoFileReader.
-// - Converts thumbnail data into WPF BitmapImage instances.
-// - Updates the corresponding IoFileListItem with the thumbnail status,
-//   image and any loading error.
+// Requests are prioritized so visible models are processed before preloaded
+// models. A queued request can be superseded by a higher-priority request for
+// the same model.
 //
-// Thumbnail requests are prioritized so visible thumbnails can be processed
-// before thumbnails that were requested only for preloading.
-//
-// The loader owns the worker queue but does not decide which models should be
-// visible. Viewport and application-level code determine when requests are
-// submitted.
-//
-// ThumbnailSizeManager provides the current thumbnail dimensions when the
-// image is decoded.
+// Each request captures the IoFileListItem thumbnail generation at the time the
+// request is accepted. If the thumbnail is invalidated while the request is
+// loading, IoFileListItem rejects the stale result instead of allowing an older
+// thumbnail to overwrite the newer state.
 // -----------------------------------------------------------------------------
 
 using System.IO;
@@ -30,28 +20,29 @@ using System.Windows.Media.Imaging;
 namespace BrickView;
 
 /// <summary>
-/// Loads BrickView model thumbnails asynchronously using a prioritized
-/// background worker queue.
+/// Loads thumbnails asynchronously from BrickLink Studio .io files.
 /// </summary>
-public class ThumbnailLoader {
-    /// <summary>
-    /// Gets the number of background workers used to process thumbnail requests.
-    /// </summary>
+public sealed class ThumbnailLoader {
     private const int WorkerCount = 4;
 
     private readonly ThumbnailSizeManager thumbnailSizeManager;
 
-    private readonly object queueLock = new();
-
     private readonly PriorityQueue<
         ThumbnailLoadRequest,
         int> queue =
-        new();
+        new PriorityQueue<
+            ThumbnailLoadRequest,
+            int>();
+
+    private readonly object queueLock =
+        new object();
 
     private readonly Dictionary<
         IoFileListItem,
         ThumbnailLoadPriority> queuedPriorities =
-        new();
+        new Dictionary<
+            IoFileListItem,
+            ThumbnailLoadPriority>();
 
     private readonly SemaphoreSlim queueSignal =
         new SemaphoreSlim(0);
@@ -141,6 +132,12 @@ public class ThumbnailLoader {
                     ThumbnailStatus.Loading;
             }
 
+            // Capture the generation after the request has been accepted.
+            // Invalidation creates a new generation, allowing active loads
+            // from this request to be recognized as stale when they finish.
+            int thumbnailGeneration =
+                item.ThumbnailGeneration;
+
             // The priority is the primary queue key. sequenceNumber ensures
             // requests with the same priority retain their submission order.
             int queuePriority =
@@ -152,7 +149,8 @@ public class ThumbnailLoader {
             ThumbnailLoadRequest request =
                 new ThumbnailLoadRequest(
                     item,
-                    priority);
+                    priority,
+                    thumbnailGeneration);
 
             queue.Enqueue(
                 request,
@@ -203,7 +201,7 @@ public class ThumbnailLoader {
             }
 
             await LoadThumbnailAsync(
-                request.Item);
+                request);
         }
     }
 
@@ -211,14 +209,18 @@ public class ThumbnailLoader {
     /// Reads the thumbnail from the model file and updates the model item with
     /// the resulting image or an appropriate error state.
     /// </summary>
-    /// <param name="item">
-    /// The model item whose thumbnail should be loaded.
+    /// <param name="request">
+    /// The thumbnail request containing the model and generation that was
+    /// current when the request was queued.
     /// </param>
     /// <returns>
     /// A task representing the asynchronous thumbnail loading operation.
     /// </returns>
     private async Task LoadThumbnailAsync(
-        IoFileListItem item) {
+        ThumbnailLoadRequest request) {
+        IoFileListItem item =
+            request.Item;
+
         try {
             ThumbnailReadResult result =
                 await Task.Run(
@@ -230,11 +232,11 @@ public class ThumbnailLoader {
                 case ThumbnailReadStatus.Loaded:
 
                     if (result.Data is null) {
-                        item.ErrorMessage =
-                            "The thumbnail data was empty.";
-
-                        item.ThumbnailStatus =
-                            ThumbnailStatus.Error;
+                        item.TryApplyThumbnailResult(
+                            request.ThumbnailGeneration,
+                            null,
+                            ThumbnailStatus.Error,
+                            "The thumbnail data was empty.");
 
                         return;
                     }
@@ -243,60 +245,63 @@ public class ThumbnailLoader {
                         CreateBitmapImage(
                             result.Data);
 
-                    item.Thumbnail =
-                        thumbnail;
-
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Loaded;
+                    item.TryApplyThumbnailResult(
+                        request.ThumbnailGeneration,
+                        thumbnail,
+                        ThumbnailStatus.Loaded,
+                        null);
 
                     break;
 
                 case ThumbnailReadStatus.Missing:
 
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Missing;
+                    item.TryApplyThumbnailResult(
+                        request.ThumbnailGeneration,
+                        null,
+                        ThumbnailStatus.Missing,
+                        null);
 
                     break;
 
                 case ThumbnailReadStatus.InvalidFile:
 
-                    item.ErrorMessage =
+                    item.TryApplyThumbnailResult(
+                        request.ThumbnailGeneration,
+                        null,
+                        ThumbnailStatus.Error,
                         result.ErrorMessage
-                        ?? "The .io file is not a valid ZIP archive.";
-
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Error;
+                        ?? "The .io file is not a valid ZIP archive.");
 
                     break;
 
                 case ThumbnailReadStatus.Error:
 
-                    item.ErrorMessage =
+                    item.TryApplyThumbnailResult(
+                        request.ThumbnailGeneration,
+                        null,
+                        ThumbnailStatus.Error,
                         result.ErrorMessage
-                        ?? "An unknown error occurred.";
-
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Error;
+                        ?? "An unknown error occurred.");
 
                     break;
 
                 default:
 
-                    item.ErrorMessage =
-                        "Unknown thumbnail status.";
-
-                    item.ThumbnailStatus =
-                        ThumbnailStatus.Error;
+                    item.TryApplyThumbnailResult(
+                        request.ThumbnailGeneration,
+                        null,
+                        ThumbnailStatus.Error,
+                        "Unknown thumbnail status.");
 
                     break;
             }
         }
         catch (Exception exception) {
-            item.ErrorMessage =
-                exception.Message;
-
-            item.ThumbnailStatus =
-                ThumbnailStatus.Error;
+            item.TryApplyThumbnailResult(
+                request.ThumbnailGeneration,
+                null,
+                ThumbnailStatus.Error,
+                exception.Message);
         }
     }
 
@@ -367,6 +372,14 @@ public class ThumbnailLoader {
         }
 
         /// <summary>
+        /// Gets the thumbnail generation that was current when the request
+        /// was accepted.
+        /// </summary>
+        public int ThumbnailGeneration {
+            get;
+        }
+
+        /// <summary>
         /// Initializes a new thumbnail load request.
         /// </summary>
         /// <param name="item">
@@ -375,14 +388,21 @@ public class ThumbnailLoader {
         /// <param name="priority">
         /// The priority assigned to the request.
         /// </param>
+        /// <param name="thumbnailGeneration">
+        /// The thumbnail generation associated with the request.
+        /// </param>
         public ThumbnailLoadRequest(
             IoFileListItem item,
-            ThumbnailLoadPriority priority) {
+            ThumbnailLoadPriority priority,
+            int thumbnailGeneration) {
             Item =
                 item;
 
             Priority =
                 priority;
+
+            ThumbnailGeneration =
+                thumbnailGeneration;
         }
     }
 }

@@ -14,6 +14,9 @@
 // Windows-specific identity resolution and persistence are intentionally kept
 // outside this class. IoFileListItem only stores the resolved model identity
 // and the data supplied by the relevant services.
+//
+// Thumbnail invalidation uses a generation counter so results from an older
+// asynchronous thumbnail request cannot overwrite a newer thumbnail state.
 // -----------------------------------------------------------------------------
 
 using System.ComponentModel;
@@ -190,6 +193,23 @@ public class IoFileListItem : INotifyPropertyChanged {
 
     private ThumbnailStatus thumbnailStatus;
 
+    private int thumbnailGeneration;
+
+    /// <summary>
+    /// Gets the current thumbnail loading generation.
+    ///
+    /// A new generation is created whenever the thumbnail is invalidated.
+    /// ThumbnailLoader uses the generation to detect results produced by an
+    /// older asynchronous request.
+    /// </summary>
+    internal int ThumbnailGeneration {
+        get {
+            lock (this) {
+                return thumbnailGeneration;
+            }
+        }
+    }
+
     /// <summary>
     /// Gets or sets the current loading state of the thumbnail.
     /// </summary>
@@ -343,6 +363,9 @@ public class IoFileListItem : INotifyPropertyChanged {
 
         thumbnailStatus =
             ThumbnailStatus.NotLoaded;
+
+        thumbnailGeneration =
+            0;
     }
 
     /// <summary>
@@ -396,10 +419,10 @@ public class IoFileListItem : INotifyPropertyChanged {
     /// The model's new file path.
     /// </param>
     /// <param name="fileSize">
-    /// The new file size in bytes.
+    /// The current file size in bytes.
     /// </param>
     /// <param name="creationTimeUtc">
-    /// The file creation time in UTC.
+    /// The current file creation time in UTC.
     /// </param>
     /// <param name="lastWriteTimeUtc">
     /// The latest modification time in UTC.
@@ -482,20 +505,74 @@ public class IoFileListItem : INotifyPropertyChanged {
 
     /// <summary>
     /// Clears the current thumbnail and resets its loading state.
+    ///
+    /// Incrementing the generation invalidates every thumbnail request that
+    /// was started before this method was called.
     /// </summary>
     public void InvalidateThumbnail() {
-        Thumbnail =
-            null;
+        lock (this) {
+            thumbnailGeneration++;
 
-        ErrorMessage =
-            null;
+            Thumbnail =
+                null;
 
-        ThumbnailStatus =
-            ThumbnailStatus.NotLoaded;
+            ErrorMessage =
+                null;
+
+            ThumbnailStatus =
+                ThumbnailStatus.NotLoaded;
+        }
     }
 
     /// <summary>
-    /// Clears the currently loaded model metadata so it can be loaded again.
+    /// Applies a thumbnail result only when it belongs to the current
+    /// thumbnail generation.
+    ///
+    /// The generation check and state update are performed under the same lock
+    /// used by InvalidateThumbnail(), preventing invalidation from occurring
+    /// between the final check and the result commit.
+    /// </summary>
+    /// <param name="generation">
+    /// The thumbnail generation associated with the completed request.
+    /// </param>
+    /// <param name="thumbnail">
+    /// The decoded thumbnail, when one was successfully loaded.
+    /// </param>
+    /// <param name="status">
+    /// The resulting thumbnail status.
+    /// </param>
+    /// <param name="errorMessage">
+    /// The error message associated with the result, if any.
+    /// </param>
+    /// <returns>
+    /// True when the result was accepted; false when it was stale.
+    /// </returns>
+    internal bool TryApplyThumbnailResult(
+        int generation,
+        BitmapImage? thumbnail,
+        ThumbnailStatus status,
+        string? errorMessage) {
+        lock (this) {
+            if (thumbnailGeneration !=
+                generation) {
+                return false;
+            }
+
+            ErrorMessage =
+                errorMessage;
+
+            Thumbnail =
+                thumbnail;
+
+            ThumbnailStatus =
+                status;
+
+            return true;
+        }
+    }
+
+    /// <summary>
+    /// Invalidates the currently loaded model metadata so it can be loaded again.
     /// </summary>
     public void InvalidateMetadata() {
         Metadata =
