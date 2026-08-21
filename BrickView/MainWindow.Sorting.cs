@@ -1,7 +1,14 @@
 ﻿// -----------------------------------------------------------------------------
 // MainWindow.Sorting.cs
 //
-// Contains the sorting state, sorting operations and sort-menu presentation for BrickView's MainWindow partial class.
+// Contains the sorting state, sorting operations and sort-menu presentation for
+// BrickView's MainWindow partial class.
+//
+// FileSortField is used directly as the MainWindow sort state so the same enum
+// represents both the active UI sort field and the persisted application state.
+// This removes the previous duplicate SortField representation and its
+// conversion logic.
+//
 // This file is an organizational split only; application behavior is unchanged.
 // -----------------------------------------------------------------------------
 
@@ -20,7 +27,7 @@ public partial class MainWindow : Window {
         object sender,
         RoutedEventArgs e) {
         SetSortField(
-            SortField.FileName);
+            FileSortField.FileName);
     }
 
     /// <summary>
@@ -32,7 +39,7 @@ public partial class MainWindow : Window {
         object sender,
         RoutedEventArgs e) {
         SetSortField(
-            SortField.CreatedDate);
+            FileSortField.CreatedDate);
     }
 
     /// <summary>
@@ -44,7 +51,7 @@ public partial class MainWindow : Window {
         object sender,
         RoutedEventArgs e) {
         SetSortField(
-            SortField.ModifiedDate);
+            FileSortField.ModifiedDate);
     }
 
     /// <summary>
@@ -76,7 +83,7 @@ public partial class MainWindow : Window {
     /// </summary>
     /// <param name="sortField">The field to use for sorting.</param>
     private void SetSortField(
-        SortField sortField) {
+        FileSortField sortField) {
         if (currentSortField ==
             sortField) {
             return;
@@ -118,7 +125,7 @@ public partial class MainWindow : Window {
     /// </summary>
     private void SortAllFileItems() {
         switch (currentSortField) {
-            case SortField.FileName:
+            case FileSortField.FileName:
 
                 allFileItems.Sort(
                     (
@@ -130,7 +137,7 @@ public partial class MainWindow : Window {
 
                 break;
 
-            case SortField.CreatedDate:
+            case FileSortField.CreatedDate:
 
                 allFileItems.Sort(
                     (
@@ -142,7 +149,7 @@ public partial class MainWindow : Window {
 
                 break;
 
-            case SortField.ModifiedDate:
+            case FileSortField.ModifiedDate:
 
                 allFileItems.Sort(
                     (
@@ -167,19 +174,19 @@ public partial class MainWindow : Window {
     private void UpdateSortMenu() {
         FileNameSortCheck.Visibility =
             currentSortField ==
-            SortField.FileName
+            FileSortField.FileName
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         CreatedDateSortCheck.Visibility =
             currentSortField ==
-            SortField.CreatedDate
+            FileSortField.CreatedDate
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
         ModifiedDateSortCheck.Visibility =
             currentSortField ==
-            SortField.ModifiedDate
+            FileSortField.ModifiedDate
                 ? Visibility.Visible
                 : Visibility.Collapsed;
 
@@ -202,21 +209,21 @@ public partial class MainWindow : Window {
                 : "↓";
 
         switch (currentSortField) {
-            case SortField.FileName:
+            case FileSortField.FileName:
 
                 SortButtonContent.Text =
                     "File name";
 
                 break;
 
-            case SortField.CreatedDate:
+            case FileSortField.CreatedDate:
 
                 SortButtonContent.Text =
                     "Created date";
 
                 break;
 
-            case SortField.ModifiedDate:
+            case FileSortField.ModifiedDate:
 
                 SortButtonContent.Text =
                     "Modified date";
@@ -224,30 +231,4 @@ public partial class MainWindow : Window {
                 break;
         }
     }
-
-    /// <summary>
-    /// Converts the window's internal sort-field representation to the persisted
-    /// application-state representation.
-    /// </summary>
-    /// <returns>The corresponding persisted file-sort field.</returns>
-    private FileSortField GetFileSortField() {
-        switch (currentSortField) {
-            case SortField.FileName:
-
-                return FileSortField.FileName;
-
-            case SortField.CreatedDate:
-
-                return FileSortField.CreatedDate;
-
-            case SortField.ModifiedDate:
-
-                return FileSortField.ModifiedDate;
-
-            default:
-
-                return FileSortField.FileName;
-        }
-    }
-
 }

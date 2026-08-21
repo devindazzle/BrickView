@@ -23,6 +23,9 @@
 // Search interpretation is handled by SmartSearchQuery and SmartSearchEngine.
 // MainWindow coordinates the search UI and applies the resulting filter.
 //
+// Sort state uses FileSortField directly. The persisted sort representation
+// and the MainWindow sort state therefore share one source of truth.
+//
 // No diagnostic or temporary debug code belongs in this production controller.
 // -----------------------------------------------------------------------------
 
@@ -99,17 +102,11 @@ public partial class MainWindow : Window {
 
     private bool searchRefreshPending;
 
-    private SortField currentSortField =
-        SortField.FileName;
+    private FileSortField currentSortField =
+        FileSortField.FileName;
 
     private FileSortDirection currentSortDirection =
         FileSortDirection.Ascending;
-
-    private enum SortField {
-        FileName,
-        CreatedDate,
-        ModifiedDate
-    }
 
     /// <summary>
     /// Initializes the main BrickView window, restores persisted window state,
@@ -137,19 +134,7 @@ public partial class MainWindow : Window {
 
         if (restoredState is not null) {
             currentSortField =
-                restoredState.SortField switch {
-                    FileSortField.FileName =>
-                        SortField.FileName,
-
-                    FileSortField.CreatedDate =>
-                        SortField.CreatedDate,
-
-                    FileSortField.ModifiedDate =>
-                        SortField.ModifiedDate,
-
-                    _ =>
-                        SortField.FileName
-                };
+                restoredState.SortField;
 
             currentSortDirection =
                 restoredState.SortDirection;
@@ -353,7 +338,7 @@ public partial class MainWindow : Window {
             this,
             currentFolder,
             thumbnailSizeManager.Current.Preset,
-            GetFileSortField(),
+            currentSortField,
             currentSortDirection);
 
         folderRefreshCancellation?.Cancel();
