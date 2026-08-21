@@ -18,6 +18,7 @@
 // - Identifies supported search fields and special "is:" expressions.
 // - Handles negated criteria.
 // - Preserves quoted text as a single search token.
+// - Preserves whitespace inside supported field values until the next field expression.
 //
 // The query parser contains no UI or persistence responsibilities.
 // SmartSearchEngine is responsible for evaluating the parsed criteria against
@@ -258,47 +259,150 @@ public sealed class SmartSearchQuery {
         List<string> tokens =
             new List<string>();
 
-        System.Text.StringBuilder token =
-            new System.Text.StringBuilder();
+        int index =
+            0;
 
-        bool insideQuotes =
-            false;
-
-        foreach (char character
-                 in searchText) {
-
-            if (character == '"') {
-                insideQuotes =
-                    !insideQuotes;
-
-                continue;
+        while (index < searchText.Length) {
+            // Skip whitespace between search criteria.
+            while (index < searchText.Length &&
+                   char.IsWhiteSpace(
+                       searchText[index])) {
+                index++;
             }
 
-            // Whitespace separates tokens only when it occurs outside a
-            // quoted expression.
-            if (char.IsWhiteSpace(character) &&
-                !insideQuotes) {
+            if (index >= searchText.Length) {
+                break;
+            }
 
-                if (token.Length > 0) {
-                    tokens.Add(
-                        token.ToString());
+            System.Text.StringBuilder token =
+                new System.Text.StringBuilder();
 
-                    token.Clear();
+            bool insideQuotes =
+                false;
+
+            // A field expression may contain whitespace in its value.
+            // Therefore, once a supported field prefix has been detected,
+            // continue consuming until the next supported field expression.
+            bool isFieldExpression =
+                IsFieldExpressionStart(
+                    searchText,
+                    index);
+
+            while (index < searchText.Length) {
+                char character =
+                    searchText[index];
+
+                if (character == '"') {
+                    insideQuotes =
+                        !insideQuotes;
+
+                    index++;
+
+                    continue;
                 }
 
-                continue;
+                if (!insideQuotes &&
+                    char.IsWhiteSpace(character)) {
+
+                    if (!isFieldExpression) {
+                        break;
+                    }
+
+                    int nextIndex =
+                        index;
+
+                    while (nextIndex < searchText.Length &&
+                           char.IsWhiteSpace(
+                               searchText[nextIndex])) {
+                        nextIndex++;
+                    }
+
+                    if (nextIndex < searchText.Length &&
+                        IsFieldExpressionStart(
+                            searchText,
+                            nextIndex)) {
+                        break;
+                    }
+
+                    // Keep whitespace as part of a field value.
+                    token.Append(
+                        ' ');
+
+                    index =
+                        nextIndex;
+
+                    continue;
+                }
+
+                token.Append(
+                    character);
+
+                index++;
             }
 
-            token.Append(
-                character);
-        }
+            if (token.Length > 0) {
+                tokens.Add(
+                    token.ToString());
+            }
 
-        if (token.Length > 0) {
-            tokens.Add(
-                token.ToString());
+            // Move past the whitespace that terminated this token.
+            while (index < searchText.Length &&
+                   char.IsWhiteSpace(
+                       searchText[index])) {
+                index++;
+            }
         }
 
         return tokens;
+    }
+
+    /// <summary>
+    /// Determines whether the text at the specified position starts a
+    /// supported Smart Search field expression.
+    /// </summary>
+    /// <param name="searchText">
+    /// The complete Smart Search text.
+    /// </param>
+    /// <param name="startIndex">
+    /// The position at which the potential field expression starts.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the text starts with a supported field
+    /// prefix, optionally preceded by the negation marker.
+    /// </returns>
+    private static bool IsFieldExpressionStart(
+        string searchText,
+        int startIndex) {
+        int fieldStartIndex =
+            startIndex;
+
+        if (fieldStartIndex < searchText.Length &&
+            searchText[fieldStartIndex] == '-') {
+            fieldStartIndex++;
+        }
+
+        int separatorIndex =
+            searchText.IndexOf(
+                ':',
+                fieldStartIndex);
+
+        if (separatorIndex <= fieldStartIndex) {
+            return false;
+        }
+
+        string field =
+            searchText[
+                fieldStartIndex..separatorIndex];
+
+        return field.Equals(
+                   "name",
+                   StringComparison.OrdinalIgnoreCase) ||
+               field.Equals(
+                   "tag",
+                   StringComparison.OrdinalIgnoreCase) ||
+               field.Equals(
+                   "is",
+                   StringComparison.OrdinalIgnoreCase);
     }
 }
 
