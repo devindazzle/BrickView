@@ -105,30 +105,6 @@ public sealed class TagService {
     }
 
     /// <summary>
-    /// Gets an existing tag definition or creates a new one.
-    /// </summary>
-    /// <param name="tagName">
-    /// The name of the tag to find or create.
-    /// </param>
-    /// <returns>
-    /// The existing or newly created tag definition.
-    /// </returns>
-    /// <remarks>
-    /// Creating a new tag or retrieving an existing tag through this method
-    /// causes the current tag store to be persisted.
-    /// </remarks>
-    public TagDefinition GetOrCreateTag(
-        string tagName) {
-        TagDefinition tag =
-            tagCatalog.GetOrCreate(
-                tagName);
-
-        Save();
-
-        return tag;
-    }
-
-    /// <summary>
     /// Gets all tags assigned to the specified model.
     /// </summary>
     /// <param name="modelIdentity">
@@ -468,72 +444,6 @@ public sealed class TagService {
 
         if (!removedTags &&
             !removedFavorite) {
-            return;
-        }
-
-        Save();
-    }
-
-    /// <summary>
-    /// Moves persisted model metadata from one stable model identity to another.
-    /// </summary>
-    /// <param name="oldModelIdentity">
-    /// The previous stable model identity.
-    /// </param>
-    /// <param name="newModelIdentity">
-    /// The new stable model identity.
-    /// </param>
-    /// <remarks>
-    /// Both tag assignments and Favorite state are moved. When no metadata
-    /// exists for the old identity, no persistence operation is performed.
-    /// </remarks>
-    /// <exception cref="ArgumentNullException">
-    /// Thrown when either model identity is null.
-    /// </exception>
-    public void UpdateModelIdentity(
-        ModelIdentity oldModelIdentity,
-        ModelIdentity newModelIdentity) {
-        ArgumentNullException.ThrowIfNull(
-            oldModelIdentity);
-
-        ArgumentNullException.ThrowIfNull(
-            newModelIdentity);
-
-        if (string.Equals(
-                oldModelIdentity.Value,
-                newModelIdentity.Value,
-                StringComparison.Ordinal)) {
-            return;
-        }
-
-        bool changed =
-            false;
-
-        if (modelTags.TryGetValue(
-                oldModelIdentity.Value,
-                out ModelTagCollection? collection)) {
-
-            modelTags.Remove(
-                oldModelIdentity.Value);
-
-            modelTags[newModelIdentity.Value] =
-                collection;
-
-            changed =
-                true;
-        }
-
-        if (favoriteModelIdentities.Remove(
-                oldModelIdentity.Value)) {
-
-            favoriteModelIdentities.Add(
-                newModelIdentity.Value);
-
-            changed =
-                true;
-        }
-
-        if (!changed) {
             return;
         }
 

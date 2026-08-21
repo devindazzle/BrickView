@@ -1,11 +1,10 @@
 ﻿// -----------------------------------------------------------------------------
-// FileSortDefinition.cs
+// FileSortEnums.cs
 //
 // Defines the sorting options used by BrickView when ordering the model list.
 //
 // FileSortField identifies the model property used for sorting, while
 // FileSortDirection determines whether the result is ascending or descending.
-// FileSortDefinition groups these two settings into one immutable value.
 // -----------------------------------------------------------------------------
 
 namespace BrickView;
@@ -43,42 +42,4 @@ public enum FileSortDirection {
     /// Sorts from highest to lowest or Z to A.
     /// </summary>
     Descending
-}
-
-/// <summary>
-/// Groups a sort field and sort direction into one sorting definition.
-/// </summary>
-public sealed class FileSortDefinition {
-    /// <summary>
-    /// Creates a sorting definition.
-    /// </summary>
-    /// <param name="field">
-    /// The model property used for sorting.
-    /// </param>
-    /// <param name="direction">
-    /// The direction used for sorting.
-    /// </param>
-    public FileSortDefinition(
-        FileSortField field,
-        FileSortDirection direction) {
-        Field =
-            field;
-
-        Direction =
-            direction;
-    }
-
-    /// <summary>
-    /// Gets the property used for sorting.
-    /// </summary>
-    public FileSortField Field {
-        get;
-    }
-
-    /// <summary>
-    /// Gets the direction used for sorting.
-    /// </summary>
-    public FileSortDirection Direction {
-        get;
-    }
 }

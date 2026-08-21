@@ -1,66 +1,126 @@
 ﻿// -----------------------------------------------------------------------------
 // MainWindow.Tagging.cs
 //
-// Handles tag-system events that require the complete BrickView model view to
-// be refreshed.
-//
-// Global tag deletion is raised by TagPickerControl as a routed UI event.
-// MainWindow handles that event at the class level so all currently loaded
-// IoFileListItem instances receive a fresh tag snapshot from TagService.
-//
-// This keeps TagPickerControl independent of MainWindow while ensuring that a
-// global tag deletion is reflected immediately on every loaded model card.
+// Contains the Favorite and tag interaction handlers for BrickView's MainWindow partial class.
+// This file is an organizational split only; application behavior is unchanged.
 // -----------------------------------------------------------------------------
 
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 
 namespace BrickView;
 
-public partial class MainWindow {
-    /// <summary>
-    /// Registers MainWindow's class-level handler for global tag deletion.
-    /// </summary>
-    static MainWindow() {
-        EventManager.RegisterClassHandler(
-            typeof(MainWindow),
-            TagPickerControl.TagDeletedEvent,
-            new RoutedEventHandler(
-                MainWindow_TagDeleted));
-    }
+public partial class MainWindow : Window {
 
     /// <summary>
-    /// Refreshes the tag snapshots of all loaded models after a global tag has
-    /// been deleted.
+    /// Toggles the Favorite state of the model represented by the clicked indicator
+    /// and refreshes the list when the Favorite filter is active.
     /// </summary>
-    /// <param name="sender">
-    /// The MainWindow receiving the routed event.
-    /// </param>
-    /// <param name="e">
-    /// The routed tag-deletion event.
-    /// </param>
-    private static void MainWindow_TagDeleted(
+    /// <param name="sender">The Favorite indicator that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
+    private void FavoriteIndicator_MouseLeftButtonDown(
         object sender,
-        RoutedEventArgs e) {
-        if (sender is not MainWindow window) {
+        MouseButtonEventArgs e) {
+        if (sender is not FrameworkElement element) {
             return;
         }
 
-        // TagService has already removed the tag globally. Refresh every
-        // loaded model so visible cards immediately reflect the new state
-        // without requiring a folder reload.
-        foreach (IoFileListItem item
-                 in window.allFileItems) {
-
-            if (item.ModelIdentity is null) {
-                continue;
-            }
-
-            item.SetTags(
-                window.tagService.GetTags(
-                    item.ModelIdentity));
+        if (element.DataContext
+            is not IoFileListItem item) {
+            return;
         }
 
-        e.Handled =
-            true;
+        if (item.ModelIdentity is null) {
+            return;
+        }
+
+        bool newFavoriteState =
+            !item.IsFavorite;
+
+        bool changed =
+            tagService.SetFavorite(
+                item.ModelIdentity,
+                newFavoriteState);
+
+        if (changed) {
+            item.IsFavorite =
+                newFavoriteState;
+        }
+
+        e.Handled = true;
+
+        if (favoriteFilterEnabled) {
+            ApplySearchFilter();
+        }
     }
+
+    /// <summary>
+    /// Opens the shared tag picker for the model represented by the clicked Add Tag button.
+    /// </summary>
+    /// <param name="sender">The Add Tag button that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
+    private void AddTagButton_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not Button button) {
+            return;
+        }
+
+        if (button.DataContext
+            is not IoFileListItem item) {
+            return;
+        }
+
+        TagPicker.OpenFor(
+            button,
+            item);
+
+        e.Handled = true;
+    }
+
+    /// <summary>
+    /// Removes the selected tag from the model represented by the clicked tag button
+    /// and refreshes the active search when necessary.
+    /// </summary>
+    /// <param name="sender">The tag remove button that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
+    private void RemoveTag_Click(
+        object sender,
+        RoutedEventArgs e) {
+        if (sender is not Button button) {
+            return;
+        }
+
+        if (button.DataContext
+            is not TagDefinition tag) {
+            return;
+        }
+
+        if (button.Tag is not IoFileListItem item) {
+            return;
+        }
+
+        if (item.ModelIdentity is null) {
+            return;
+        }
+
+        bool removed =
+            tagService.RemoveTag(
+                item.ModelIdentity,
+                tag.Name);
+
+        if (removed) {
+            item.SetTags(
+                tagService.GetTags(
+                    item.ModelIdentity));
+
+            if (!currentSearchQuery.IsEmpty) {
+                RequestSearchRefresh();
+            }
+        }
+
+        e.Handled = true;
+    }
+
 }

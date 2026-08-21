@@ -93,14 +93,21 @@ public sealed class FolderDiffService {
                 continue;
             }
 
-            FileInfo fileInfo =
-                new FileInfo(
-                    filePath);
+            if (!TryGetFileMetadata(
+                    filePath,
+                    out long fileSize,
+                    out DateTime lastWriteTimeUtc)) {
+                // The file may have disappeared or become inaccessible after
+                // the directory snapshot was created. Leave the existing model
+                // item untouched and allow a later refresh to establish the
+                // correct state.
+                continue;
+            }
 
             bool fileModified =
-                fileInfo.Length !=
+                fileSize !=
                     existingItem.FileSize ||
-                fileInfo.LastWriteTimeUtc !=
+                lastWriteTimeUtc !=
                     existingItem.LastWriteTimeUtc;
 
             changes.Add(
@@ -182,6 +189,55 @@ public sealed class FolderDiffService {
 
         return new FolderDiff(
             changes);
+    }
+
+    /// <summary>
+    /// Attempts to read the metadata required for change detection.
+    /// </summary>
+    /// <param name="filePath">
+    /// The file whose metadata should be read.
+    /// </param>
+    /// <param name="fileSize">
+    /// Receives the current file size when the operation succeeds.
+    /// </param>
+    /// <param name="lastWriteTimeUtc">
+    /// Receives the current last-write timestamp in UTC when the operation succeeds.
+    /// </param>
+    /// <returns>
+    /// True when the metadata could be read; otherwise false.
+    /// </returns>
+    private static bool TryGetFileMetadata(
+        string filePath,
+        out long fileSize,
+        out DateTime lastWriteTimeUtc) {
+        fileSize = 0;
+        lastWriteTimeUtc = default;
+
+        try {
+            FileInfo fileInfo =
+                new FileInfo(
+                    filePath);
+
+            fileSize =
+                fileInfo.Length;
+
+            lastWriteTimeUtc =
+                fileInfo.LastWriteTimeUtc;
+
+            return true;
+        }
+        catch (FileNotFoundException) {
+            return false;
+        }
+        catch (DirectoryNotFoundException) {
+            return false;
+        }
+        catch (UnauthorizedAccessException) {
+            return false;
+        }
+        catch (IOException) {
+            return false;
+        }
     }
 
     /// <summary>

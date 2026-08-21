@@ -68,23 +68,6 @@ public sealed class SmartSearchQuery {
     }
 
     /// <summary>
-    /// Gets a value indicating whether evaluating this query may require
-    /// model data beyond the model name.
-    /// </summary>
-    /// <remarks>
-    /// Name-only criteria can be evaluated from the model name alone.
-    /// Other criteria may require tags or Favorite state.
-    /// </remarks>
-    public bool RequiresModelData {
-        get {
-            return Criteria.Any(
-                criterion =>
-                    criterion.Field !=
-                    SmartSearchField.Name);
-        }
-    }
-
-    /// <summary>
     /// Parses raw Smart Search text into a structured query.
     /// </summary>
     /// <param name="searchText">

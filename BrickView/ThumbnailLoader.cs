@@ -67,23 +67,11 @@ public class ThumbnailLoader {
     /// <summary>
     /// Initializes the thumbnail loader and starts its background workers.
     /// </summary>
-    /// <param name="thumbnailWidth">
-    /// The thumbnail width used to validate the loader configuration.
-    /// </param>
-    /// <exception cref="ArgumentOutOfRangeException">
-    /// Thrown when <paramref name="thumbnailWidth"/> is zero or negative.
-    /// </exception>
     /// <remarks>
     /// The current thumbnail dimensions used for decoding are obtained from
     /// <see cref="ThumbnailSizeManager"/> when each image is created.
     /// </remarks>
-    public ThumbnailLoader(
-        double thumbnailWidth) {
-        if (thumbnailWidth <= 0) {
-            throw new ArgumentOutOfRangeException(
-                nameof(thumbnailWidth));
-        }
-
+    public ThumbnailLoader() {
         thumbnailSizeManager =
             ThumbnailSizeManager.Instance;
 
