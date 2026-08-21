@@ -4,6 +4,20 @@
     Defines the main BrickView window, including the toolbar, search and sort
     controls, model grid and model-card presentation.
     
+    Responsibilities:
+    - Presents the main navigation and model-browser UI.
+    - Defines the visual styles used by the window and model cards.
+    - Provides the Smart Search field and Favorite filter control.
+    - Displays model thumbnails, metadata, tags and Favorite state.
+    
+    Behavioral logic is implemented in MainWindow.xaml.cs and the partial
+    MainWindow files. This file contains presentation, styling and event wiring
+    only; it does not define executable functions or methods.
+    
+    No diagnostic/debug code is intentionally kept in this XAML file. Event
+    handlers referenced by Click/MouseLeftButtonDown attributes are implemented
+    in the corresponding code-behind files.
+    
     Tags are displayed directly below the model name. Each tag receives a
     stable BrickView-selected color and provides a remove action. The AddTag
     button follows the last tag in the same horizontal row.
@@ -24,12 +38,16 @@
     SnapsToDevicePixels="True"
     UseLayoutRounding="True">
 
+    <!--
+        Shared resources and control styles used throughout the main window.
+        These definitions centralize the visual language used by the toolbar,
+        sorting controls, context menus, scrollbars and model cards.
+    -->
     <Window.Resources>
 
         <SolidColorBrush x:Key="OuterBackgroundBrush" Color="#24252E" />
         <SolidColorBrush x:Key="ContentBackgroundBrush" Color="#24252E" />
         <SolidColorBrush x:Key="ToolbarBackgroundBrush" Color="#2A2D34" />
-        <SolidColorBrush x:Key="CardBackgroundBrush" Color="#24252E" />
         <SolidColorBrush x:Key="CardBorderBrush" Color="#303138" />
         <SolidColorBrush x:Key="CardSelectedBrush" Color="#394D5F" />
         <SolidColorBrush x:Key="ThumbnailBackgroundBrush" Color="#18191D" />
@@ -759,6 +777,7 @@
 
     </Window.Resources>
 
+    <!--  Main window layout: toolbar, controls and model browser.  -->
     <Grid Background="{StaticResource OuterBackgroundBrush}">
 
         <Grid.RowDefinitions>
@@ -769,6 +788,10 @@
 
         </Grid.RowDefinitions>
 
+        <!--
+            Toolbar containing folder navigation, search, Favorite filtering,
+            sorting and thumbnail-size controls.
+        -->
         <Border
             Grid.Row="0"
             Background="{StaticResource ToolbarBackgroundBrush}"
@@ -1246,6 +1269,10 @@
 
         </Border>
 
+        <!--
+            Model browser area containing the result count, model list and
+            empty-state messages.
+        -->
         <Border Grid.Row="2" Background="{StaticResource ContentBackgroundBrush}">
 
             <Grid>
@@ -1266,6 +1293,10 @@
                     Foreground="{StaticResource PrimaryTextBrush}"
                     Text="0 models" />
 
+                <!--
+                    Model list. Each item is rendered by the DataTemplate below,
+                    including thumbnail, metadata, Favorite state and tags.
+                -->
                 <ListBox
                     x:Name="FileList"
                     Grid.Row="1"
@@ -1290,6 +1321,7 @@
 
                     <ListBox.ItemTemplate>
 
+                        <!--  Complete visual representation of one model card.  -->
                         <DataTemplate>
 
                             <StackPanel
@@ -1899,6 +1931,7 @@
 
                                             <DataTemplate>
 
+                                                <!--  Individual tag with its remove action.  -->
                                                 <Border
                                                     Height="18"
                                                     MaxWidth="110"
@@ -2022,6 +2055,7 @@
 
                                     </ItemsControl>
 
+                                    <!--  Add-tag action; hidden after three tags.  -->
                                     <Button
                                         Width="18"
                                         Height="18"
@@ -2130,6 +2164,7 @@
 
                 </ListBox>
 
+                <!--  Empty state shown when the current view has no results.  -->
                 <TextBlock
                     x:Name="NoResultsText"
                     HorizontalAlignment="Center"
@@ -2140,6 +2175,7 @@
                     Text="No models found"
                     Visibility="Collapsed" />
 
+                <!--  Empty state shown before a model folder is selected.  -->
                 <TextBlock
                     x:Name="NoFolderSelectedText"
                     HorizontalAlignment="Center"
@@ -2154,6 +2190,10 @@
 
         </Border>
 
+        <!--
+            Tag picker overlay. TagPickerControl owns its own behavior and data
+            handling; MainWindow only hosts and positions the control.
+        -->
         <local:TagPickerControl
             x:Name="TagPicker"
             Grid.RowSpan="3"

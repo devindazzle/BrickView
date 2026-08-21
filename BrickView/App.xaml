@@ -1,4 +1,13 @@
-﻿<Application
+﻿<!--
+    App.xaml
+    
+    Defines the WPF application entry point for BrickView.
+    
+    The application starts MainWindow and currently does not define any
+    application-wide resource dictionaries.
+-->
+
+<Application
     x:Class="BrickView.App"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"

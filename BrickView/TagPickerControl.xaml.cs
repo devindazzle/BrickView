@@ -3,16 +3,24 @@
 //
 // Provides the interaction logic for BrickView's compact tag picker.
 //
-// The control displays the existing tags from the shared TagService and allows
-// the user to assign an existing tag or create a new tag directly from the
-// picker.
+// Responsibilities:
+// - Displays the available tags supplied by the shared TagService.
+// - Filters tags according to the user's search text.
+// - Assigns existing tags to the currently selected model.
+// - Creates and assigns a new tag from the search field.
+// - Confirms and performs global tag deletion.
+// - Notifies MainWindow when a tag has been deleted globally.
 //
-// TagService remains responsible for tag business rules and persistence.
-// This control is responsible only for presentation and user interaction.
+// TagService remains responsible for tag business rules, tag storage and
+// persistence. This control is responsible only for presentation-level
+// interaction and for coordinating calls to TagService.
 //
-// Global tag deletion is confirmed here before the TagService performs the
-// destructive operation. After a successful deletion the control raises
-// TagDeleted so MainWindow can refresh the tag snapshots of all visible models.
+// A model can have a maximum of three tags. The picker therefore prevents
+// opening when the target model has already reached that limit.
+//
+// Global tag deletion is confirmed here before the destructive operation is
+// performed by TagService. After a successful deletion the control raises
+// TagDeleted so MainWindow can refresh the tag snapshots of affected models.
 // -----------------------------------------------------------------------------
 
 using System.Windows;
@@ -20,6 +28,10 @@ using System.Windows.Controls;
 
 namespace BrickView;
 
+/// <summary>
+/// Provides the compact tag-picker UI and coordinates user interaction with
+/// the shared <see cref="TagService"/>.
+/// </summary>
 public partial class TagPickerControl : UserControl {
     private TagService? tagService;
 
@@ -27,6 +39,9 @@ public partial class TagPickerControl : UserControl {
 
     private readonly List<TagDefinition> allTags;
 
+    /// <summary>
+    /// Identifies the routed event raised after a tag has been deleted globally.
+    /// </summary>
     public static readonly RoutedEvent TagDeletedEvent =
         EventManager.RegisterRoutedEvent(
             nameof(TagDeleted),
@@ -34,6 +49,13 @@ public partial class TagPickerControl : UserControl {
             typeof(RoutedEventHandler),
             typeof(TagPickerControl));
 
+    /// <summary>
+    /// Occurs after a tag has been deleted globally through the picker.
+    /// </summary>
+    /// <remarks>
+    /// The event bubbles through the WPF visual tree so the owning window can
+    /// refresh the tag snapshots of visible model items.
+    /// </remarks>
     public event RoutedEventHandler TagDeleted {
         add {
             AddHandler(
@@ -48,6 +70,12 @@ public partial class TagPickerControl : UserControl {
         }
     }
 
+    /// <summary>
+    /// Gets or sets the shared tag service used by the picker.
+    /// </summary>
+    /// <remarks>
+    /// Assigning the service immediately refreshes the list of available tags.
+    /// </remarks>
     public TagService? TagService {
         get {
             return tagService;
@@ -61,6 +89,9 @@ public partial class TagPickerControl : UserControl {
         }
     }
 
+    /// <summary>
+    /// Initializes the tag-picker control and its in-memory tag list.
+    /// </summary>
     public TagPickerControl() {
         InitializeComponent();
 
@@ -68,6 +99,20 @@ public partial class TagPickerControl : UserControl {
             new List<TagDefinition>();
     }
 
+    /// <summary>
+    /// Opens the tag picker for the specified model and positions it relative
+    /// to the supplied UI element.
+    /// </summary>
+    /// <param name="placementTarget">
+    /// The UI element relative to which the picker should be displayed.
+    /// </param>
+    /// <param name="item">
+    /// The model that will receive the selected tag.
+    /// </param>
+    /// <remarks>
+    /// The picker is not opened when the tag service is unavailable, the model
+    /// has no stable identity or the model already contains three tags.
+    /// </remarks>
     public void OpenFor(
         FrameworkElement placementTarget,
         IoFileListItem item) {
@@ -107,12 +152,30 @@ public partial class TagPickerControl : UserControl {
         SearchTextBox.Focus();
     }
 
+    /// <summary>
+    /// Refreshes the visible tag list whenever the search text changes.
+    /// </summary>
+    /// <param name="sender">
+    /// The search text box that raised the event.
+    /// </param>
+    /// <param name="e">
+    /// Text-change event data supplied by WPF.
+    /// </param>
     private void SearchTextBox_TextChanged(
         object sender,
         TextChangedEventArgs e) {
         RefreshTagList();
     }
 
+    /// <summary>
+    /// Assigns the tag represented by the clicked tag chip to the current model.
+    /// </summary>
+    /// <param name="sender">
+    /// The tag-chip button that was clicked.
+    /// </param>
+    /// <param name="e">
+    /// Routed event data supplied by WPF.
+    /// </param>
     private void TagChip_Click(
         object sender,
         RoutedEventArgs e) {
@@ -132,6 +195,15 @@ public partial class TagPickerControl : UserControl {
             true;
     }
 
+    /// <summary>
+    /// Requests confirmation and, when confirmed, deletes the tag globally.
+    /// </summary>
+    /// <param name="sender">
+    /// The delete button belonging to the selected tag.
+    /// </param>
+    /// <param name="e">
+    /// Routed event data supplied by WPF.
+    /// </param>
     private void DeleteTagButton_Click(
         object sender,
         RoutedEventArgs e) {
@@ -151,6 +223,15 @@ public partial class TagPickerControl : UserControl {
             true;
     }
 
+    /// <summary>
+    /// Creates and assigns a new tag using the current search text.
+    /// </summary>
+    /// <param name="sender">
+    /// The create-tag button that was clicked.
+    /// </param>
+    /// <param name="e">
+    /// Routed event data supplied by WPF.
+    /// </param>
     private void CreateTagButton_Click(
         object sender,
         RoutedEventArgs e) {
@@ -166,6 +247,13 @@ public partial class TagPickerControl : UserControl {
             tagName);
     }
 
+    /// <summary>
+    /// Adds the specified tag to the current model through TagService and
+    /// refreshes the model's local tag snapshot when the operation succeeds.
+    /// </summary>
+    /// <param name="tagName">
+    /// The name of the tag to assign to the current model.
+    /// </param>
     private void AddTagToTarget(
         string tagName) {
         if (tagService is null ||
@@ -196,6 +284,13 @@ public partial class TagPickerControl : UserControl {
         Close();
     }
 
+    /// <summary>
+    /// Displays a confirmation dialog and deletes the specified tag globally
+    /// when the user confirms the destructive operation.
+    /// </summary>
+    /// <param name="tag">
+    /// The tag to delete.
+    /// </param>
     private void ConfirmAndDeleteTag(
         TagDefinition tag) {
         if (tagService is null) {
@@ -240,12 +335,18 @@ public partial class TagPickerControl : UserControl {
 
         RefreshTagList();
 
+        // Notify the owning window so it can refresh the tag snapshots of
+        // other visible models affected by the global deletion.
         RaiseEvent(
             new RoutedEventArgs(
                 TagDeletedEvent,
                 this));
     }
 
+    /// <summary>
+    /// Rebuilds the available tag list from TagService, applies the current
+    /// search filter and updates the create-tag controls.
+    /// </summary>
     private void RefreshTagList() {
         allTags.Clear();
 
@@ -281,6 +382,13 @@ public partial class TagPickerControl : UserControl {
             searchText);
     }
 
+    /// <summary>
+    /// Updates the visibility and text of the create-tag controls according
+    /// to the current search text and whether a matching tag already exists.
+    /// </summary>
+    /// <param name="searchText">
+    /// The normalized search text currently entered by the user.
+    /// </param>
     private void UpdateCreateTagButton(
         string searchText) {
         if (string.IsNullOrWhiteSpace(
@@ -320,6 +428,9 @@ public partial class TagPickerControl : UserControl {
             Visibility.Visible;
     }
 
+    /// <summary>
+    /// Closes the tag picker and clears its current model target.
+    /// </summary>
     private void Close() {
         TagPickerPopup.IsOpen =
             false;

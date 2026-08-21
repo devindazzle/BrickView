@@ -1,9 +1,14 @@
 ﻿// -----------------------------------------------------------------------------
 // MainWindow.xaml.cs
 //
-// Contains the main BrickView window controller and coordinates folder loading,
-// file watching, sorting, searching, thumbnail loading, metadata loading,
-// tag management and user interactions.
+// Defines the main BrickView window controller and coordinates the interaction
+// between the window UI and the services responsible for folder loading,
+// file-system monitoring, sorting, searching, thumbnail loading, metadata,
+// tags, model identity and application state.
+//
+// MainWindow owns the presentation-level orchestration for the model browser.
+// It does not implement the underlying services; instead, it delegates
+// specialized work to the corresponding service classes.
 //
 // Model identity resolution is performed asynchronously so Windows file-system
 // identity lookups do not block the UI while large folders are being loaded.
@@ -12,13 +17,13 @@
 //
 // Tag data is provided by one long-lived TagService instance. Tags are loaded
 // into an IoFileListItem only after its stable ModelIdentity has been resolved.
-// Tag lookups use the in-memory tag store and therefore do not perform disk I/O.
-//
-// TagPickerControl owns the tag-picker UI. MainWindow only supplies the target
-// model and the shared TagService to that control.
+// TagPickerControl owns the tag-picker UI; MainWindow supplies the target model
+// and the shared TagService instance.
 //
 // Search interpretation is handled by SmartSearchQuery and SmartSearchEngine.
-// MainWindow only coordinates the search UI and applies the resulting filter.
+// MainWindow coordinates the search UI and applies the resulting filter.
+//
+// No diagnostic or temporary debug code belongs in this production controller.
 // -----------------------------------------------------------------------------
 
 using Microsoft.Win32;
@@ -82,8 +87,6 @@ public partial class MainWindow : Window {
 
     private readonly SmartSearchEngine smartSearchEngine;
 
-    private readonly HashSet<IoFileListItem> metadataLoadingItems;
-
     private readonly List<IoFileListItem> allFileItems;
 
     private string? currentFolder;
@@ -113,6 +116,10 @@ public partial class MainWindow : Window {
         ModifiedDate
     }
 
+    /// <summary>
+    /// Initializes the main BrickView window, restores persisted window state,
+    /// creates the required services and connects UI and file-system events.
+    /// </summary>
     public MainWindow() {
         InitializeComponent();
 
@@ -158,9 +165,6 @@ public partial class MainWindow : Window {
 
         thumbnailSizeManager.SizeChanged +=
             ThumbnailSizeManager_SizeChanged;
-
-        metadataLoadingItems =
-            new HashSet<IoFileListItem>();
 
         allFileItems =
             new List<IoFileListItem>();
@@ -284,6 +288,12 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Completes startup after the window has loaded and restores the previously
+    /// selected folder when that folder still exists.
+    /// </summary>
+    /// <param name="sender">The object that raised the event.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private async void MainWindow_Loaded(
         object sender,
         RoutedEventArgs e) {
@@ -337,6 +347,11 @@ public partial class MainWindow : Window {
             folder);
     }
 
+    /// <summary>
+    /// Applies a newly selected thumbnail size and invalidates existing
+    /// thumbnails so they can be regenerated at the new dimensions.
+    /// </summary>
+    /// <param name="newSize">The thumbnail-size definition to apply.</param>
     private void ThumbnailSizeManager_SizeChanged(
         ThumbnailSizeDefinition newSize) {
         ApplyThumbnailSize(
@@ -350,6 +365,10 @@ public partial class MainWindow : Window {
         FileList.InvalidateMeasure();
     }
 
+    /// <summary>
+    /// Updates the dependency properties that determine thumbnail and card dimensions.
+    /// </summary>
+    /// <param name="size">The thumbnail-size definition to apply.</param>
     private void ApplyThumbnailSize(
         ThumbnailSizeDefinition size) {
         ThumbnailWidth =
@@ -365,6 +384,10 @@ public partial class MainWindow : Window {
             size.CardHeight;
     }
 
+    /// <summary>
+    /// Synchronizes the thumbnail-size radio buttons with the selected preset.
+    /// </summary>
+    /// <param name="preset">The currently selected thumbnail-size preset.</param>
     private void SetThumbnailSizeSelector(
         ThumbnailSizePreset preset) {
         SmallThumbnailSizeRadioButton.IsChecked =
@@ -377,6 +400,12 @@ public partial class MainWindow : Window {
             preset == ThumbnailSizePreset.Large;
     }
 
+    /// <summary>
+    /// Handles a thumbnail-size selection and delegates the actual size change
+    /// to the shared thumbnail-size manager.
+    /// </summary>
+    /// <param name="sender">The radio button that raised the event.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void ThumbnailSizeSelector_Checked(
         object sender,
         RoutedEventArgs e) {
@@ -425,6 +454,11 @@ public partial class MainWindow : Window {
             preset);
     }
 
+    /// <summary>
+    /// Opens the folder-selection dialog and loads the selected folder into BrickView.
+    /// </summary>
+    /// <param name="sender">The button that raised the event.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private async void SelectFolder_Click(
         object sender,
         RoutedEventArgs e) {
@@ -464,13 +498,24 @@ public partial class MainWindow : Window {
             folder);
     }
 
+    /// <summary>
+    /// Refreshes the currently selected folder and applies any detected file changes.
+    /// </summary>
+    /// <param name="sender">The button that raised the event.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private async void RefreshView_Click(
         object sender,
         RoutedEventArgs e) {
         await RefreshCurrentFolderAsync();
     }
 
-    private async Task LoadIoFilesAsync(
+    /// <summary>
+    /// Loads all top-level .io files from the specified folder into the model list,
+    /// starts asynchronous identity resolution and applies the current sort and filter.
+    /// </summary>
+    /// <param name="folder">The folder containing the BrickView model files.</param>
+    /// <returns>A completed task after the initial file list has been prepared.</returns>
+    private Task LoadIoFilesAsync(
         string folder) {
         modelIdentityCancellation?.Cancel();
 
@@ -480,8 +525,6 @@ public partial class MainWindow : Window {
             new CancellationTokenSource();
 
         allFileItems.Clear();
-
-        metadataLoadingItems.Clear();
 
         FileList.Items.Clear();
 
@@ -510,9 +553,14 @@ public partial class MainWindow : Window {
 
         ApplySearchFilter();
 
-        await Task.CompletedTask;
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Compares the current folder with the existing model list and applies additions,
+    /// removals, modifications and renames before refreshing the visible list.
+    /// </summary>
+    /// <returns>A task that completes when the folder comparison and UI refresh finish.</returns>
     private async Task RefreshCurrentFolderAsync() {
         if (string.IsNullOrWhiteSpace(
                 currentFolder)) {
@@ -532,8 +580,6 @@ public partial class MainWindow : Window {
             folderWatcher.Stop();
 
             allFileItems.Clear();
-
-            metadataLoadingItems.Clear();
 
             FileList.Items.Clear();
 
@@ -616,6 +662,11 @@ public partial class MainWindow : Window {
         ApplySearchFilter();
     }
 
+    /// <summary>
+    /// Creates and registers a model-list item for an existing .io file and starts
+    /// asynchronous model-identity resolution for that item.
+    /// </summary>
+    /// <param name="filePath">The full path of the .io file to add.</param>
     private void AddFileListItem(
         string filePath) {
         if (!File.Exists(
@@ -656,6 +707,13 @@ public partial class MainWindow : Window {
             cancellationToken);
     }
 
+    /// <summary>
+    /// Resolves a model's stable Windows file identity asynchronously and then loads
+    /// its tags and Favorite state from the shared tag service.
+    /// </summary>
+    /// <param name="item">The model-list item whose identity should be resolved.</param>
+    /// <param name="cancellationToken">Token used to cancel obsolete identity lookups.</param>
+    /// <returns>A task representing the asynchronous identity-resolution operation.</returns>
     private async Task LoadModelIdentityAsync(
         IoFileListItem item,
         CancellationToken cancellationToken) {
@@ -702,6 +760,12 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Updates an existing model-list item after its backing file has been renamed,
+    /// preserving the existing item so its model identity and associated state remain intact.
+    /// </summary>
+    /// <param name="previousFilePath">The file path before the rename.</param>
+    /// <param name="newFilePath">The file path after the rename.</param>
     private void UpdateRenamedFile(
         string? previousFilePath,
         string newFilePath) {
@@ -748,6 +812,10 @@ public partial class MainWindow : Window {
             cancellationToken);
     }
 
+    /// <summary>
+    /// Removes the model-list item whose file path matches the specified path.
+    /// </summary>
+    /// <param name="filePath">The path of the model file to remove.</param>
     private void RemoveFileListItem(
         string filePath) {
         IoFileListItem? item =
@@ -760,14 +828,16 @@ public partial class MainWindow : Window {
                             StringComparison.OrdinalIgnoreCase));
 
         if (item is not null) {
-            metadataLoadingItems.Remove(
-                item);
-
             allFileItems.Remove(
                 item);
         }
     }
 
+    /// <summary>
+    /// Refreshes file information for a modified model and invalidates its thumbnail
+    /// and metadata so the updated file can be represented correctly.
+    /// </summary>
+    /// <param name="filePath">The path of the modified model file.</param>
     private void UpdateModifiedFile(
         string filePath) {
         IoFileListItem? item =
@@ -802,6 +872,12 @@ public partial class MainWindow : Window {
         item.InvalidateMetadata();
     }
 
+    /// <summary>
+    /// Toggles the Favorite state of the model represented by the clicked indicator
+    /// and refreshes the list when the Favorite filter is active.
+    /// </summary>
+    /// <param name="sender">The Favorite indicator that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
     private void FavoriteIndicator_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e) {
@@ -838,6 +914,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Opens the shared tag picker for the model represented by the clicked Add Tag button.
+    /// </summary>
+    /// <param name="sender">The Add Tag button that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
     private void AddTagButton_Click(
         object sender,
         RoutedEventArgs e) {
@@ -857,6 +938,12 @@ public partial class MainWindow : Window {
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Removes the selected tag from the model represented by the clicked tag button
+    /// and refreshes the active search when necessary.
+    /// </summary>
+    /// <param name="sender">The tag remove button that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
     private void RemoveTag_Click(
         object sender,
         RoutedEventArgs e) {
@@ -895,6 +982,11 @@ public partial class MainWindow : Window {
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Selects file name as the active sort field.
+    /// </summary>
+    /// <param name="sender">The sort-menu button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void SortFileName_Click(
         object sender,
         RoutedEventArgs e) {
@@ -902,6 +994,11 @@ public partial class MainWindow : Window {
             SortField.FileName);
     }
 
+    /// <summary>
+    /// Selects creation date as the active sort field.
+    /// </summary>
+    /// <param name="sender">The sort-menu button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void SortCreatedDate_Click(
         object sender,
         RoutedEventArgs e) {
@@ -909,6 +1006,11 @@ public partial class MainWindow : Window {
             SortField.CreatedDate);
     }
 
+    /// <summary>
+    /// Selects last-modified date as the active sort field.
+    /// </summary>
+    /// <param name="sender">The sort-menu button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void SortModifiedDate_Click(
         object sender,
         RoutedEventArgs e) {
@@ -916,6 +1018,11 @@ public partial class MainWindow : Window {
             SortField.ModifiedDate);
     }
 
+    /// <summary>
+    /// Selects ascending order for the active sort field.
+    /// </summary>
+    /// <param name="sender">The sort-menu button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void SortAscending_Click(
         object sender,
         RoutedEventArgs e) {
@@ -923,6 +1030,11 @@ public partial class MainWindow : Window {
             FileSortDirection.Ascending);
     }
 
+    /// <summary>
+    /// Selects descending order for the active sort field.
+    /// </summary>
+    /// <param name="sender">The sort-menu button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void SortDescending_Click(
         object sender,
         RoutedEventArgs e) {
@@ -930,6 +1042,10 @@ public partial class MainWindow : Window {
             FileSortDirection.Descending);
     }
 
+    /// <summary>
+    /// Changes the active sort field and reapplies sorting, filtering and menu state.
+    /// </summary>
+    /// <param name="sortField">The field to use for sorting.</param>
     private void SetSortField(
         SortField sortField) {
         if (currentSortField ==
@@ -947,6 +1063,10 @@ public partial class MainWindow : Window {
         UpdateSortMenu();
     }
 
+    /// <summary>
+    /// Changes the active sort direction and reapplies sorting, filtering and menu state.
+    /// </summary>
+    /// <param name="sortDirection">The direction to use for sorting.</param>
     private void SetSortDirection(
         FileSortDirection sortDirection) {
         if (currentSortDirection ==
@@ -964,6 +1084,9 @@ public partial class MainWindow : Window {
         UpdateSortMenu();
     }
 
+    /// <summary>
+    /// Sorts the complete in-memory model list using the selected field and direction.
+    /// </summary>
     private void SortAllFileItems() {
         switch (currentSortField) {
             case SortField.FileName:
@@ -1009,6 +1132,9 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Updates the sort popup controls and toolbar labels to reflect the current sort state.
+    /// </summary>
     private void UpdateSortMenu() {
         FileNameSortCheck.Visibility =
             currentSortField ==
@@ -1070,6 +1196,10 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Applies the Favorite filter and Smart Search query to the complete model list
+    /// and updates the visible ListBox contents and result count.
+    /// </summary>
     private void ApplySearchFilter() {
         SmartSearchQuery query =
             currentSearchQuery;
@@ -1127,6 +1257,11 @@ public partial class MainWindow : Window {
                 : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Updates the Favorite-only filter state from the toolbar button and reapplies the filter.
+    /// </summary>
+    /// <param name="sender">The Favorite filter button that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void FavoriteFilterButton_Click(
         object sender,
         RoutedEventArgs e) {
@@ -1141,11 +1276,19 @@ public partial class MainWindow : Window {
         ApplySearchFilter();
     }
 
+    /// <summary>
+    /// Determines whether Favorite filtering or a Smart Search query is currently active.
+    /// </summary>
+    /// <returns><see langword="true"/> when at least one search filter is active.</returns>
     private bool HasActiveSearchFilter() {
         return favoriteFilterEnabled ||
                !currentSearchQuery.IsEmpty;
     }
 
+    /// <summary>
+    /// Schedules a deferred search refresh when identity-dependent search state changes,
+    /// coalescing multiple requests into a single UI update.
+    /// </summary>
     private void RequestSearchRefresh() {
         if (!HasActiveSearchFilter() ||
             searchRefreshPending) {
@@ -1166,6 +1309,11 @@ public partial class MainWindow : Window {
             DispatcherPriority.Background);
     }
 
+    /// <summary>
+    /// Creates the singular or plural result-count text used by the model browser.
+    /// </summary>
+    /// <param name="modelCount">The number of models.</param>
+    /// <returns>A correctly pluralized model-count string.</returns>
     private string CreateModelCountText(
         int modelCount) {
         return modelCount == 1
@@ -1173,6 +1321,11 @@ public partial class MainWindow : Window {
             : $"{modelCount} models";
     }
 
+    /// <summary>
+    /// Parses the current Smart Search text and applies the resulting query immediately.
+    /// </summary>
+    /// <param name="sender">The search text box that changed.</param>
+    /// <param name="e">Text-change event data supplied by WPF.</param>
     private void SearchTextBox_TextChanged(
         object sender,
         System.Windows.Controls.TextChangedEventArgs e) {
@@ -1183,6 +1336,11 @@ public partial class MainWindow : Window {
         ApplySearchFilter();
     }
 
+    /// <summary>
+    /// Clears the Smart Search field when the user presses Escape.
+    /// </summary>
+    /// <param name="sender">The search text box receiving the key event.</param>
+    /// <param name="e">Keyboard event data supplied by WPF.</param>
     private void SearchTextBox_PreviewKeyDown(
         object sender,
         KeyEventArgs e) {
@@ -1197,6 +1355,12 @@ public partial class MainWindow : Window {
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Loads thumbnails for visible models and preloads thumbnails immediately beyond
+    /// the visible viewport to improve scrolling responsiveness.
+    /// </summary>
+    /// <param name="sender">The virtualized file list that raised the event.</param>
+    /// <param name="e">Viewport event data containing the visible item range.</param>
     private void FileList_ViewportChanged(
         object sender,
         RoutedEventArgs e) {
@@ -1274,6 +1438,12 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Loads metadata for a model when it has not already been loaded and discards
+    /// stale results if the underlying file changed while loading was in progress.
+    /// </summary>
+    /// <param name="item">The model-list item whose metadata should be loaded.</param>
+    /// <returns>A task representing the asynchronous metadata load.</returns>
     private async Task LoadMetadataAsync(
         IoFileListItem item) {
         if (item.Metadata is not null) {
@@ -1305,6 +1475,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Opens the model file represented by the clicked thumbnail.
+    /// </summary>
+    /// <param name="sender">The thumbnail element that was clicked.</param>
+    /// <param name="e">Mouse event data supplied by WPF.</param>
     private void Thumbnail_MouseLeftButtonDown(
         object sender,
         MouseButtonEventArgs e) {
@@ -1323,6 +1498,11 @@ public partial class MainWindow : Window {
         e.Handled = true;
     }
 
+    /// <summary>
+    /// Opens the model associated with the context menu in the default application.
+    /// </summary>
+    /// <param name="sender">The context-menu item that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void OpenInStudio_Click(
         object sender,
         RoutedEventArgs e) {
@@ -1348,6 +1528,10 @@ public partial class MainWindow : Window {
             item);
     }
 
+    /// <summary>
+    /// Opens the specified model file using the Windows shell.
+    /// </summary>
+    /// <param name="item">The model-list item whose file should be opened.</param>
     private void OpenFile(
         IoFileListItem item) {
         if (item.HasError) {
@@ -1370,6 +1554,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Opens Windows File Explorer with the selected model file highlighted.
+    /// </summary>
+    /// <param name="sender">The context-menu item that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void ShowInFileExplorer_Click(
         object sender,
         RoutedEventArgs e) {
@@ -1420,6 +1609,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Copies the full path of the selected model file to the Windows clipboard.
+    /// </summary>
+    /// <param name="sender">The context-menu item that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void CopyFilePath_Click(
         object sender,
         RoutedEventArgs e) {
@@ -1454,6 +1648,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Copies the file name of the selected model to the Windows clipboard.
+    /// </summary>
+    /// <param name="sender">The context-menu item that was clicked.</param>
+    /// <param name="e">Event data supplied by WPF.</param>
     private void CopyFileName_Click(
         object sender,
         RoutedEventArgs e) {
@@ -1489,6 +1688,12 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Marshals a file-system change notification to the WPF dispatcher so the folder
+    /// refresh can be scheduled safely on the UI thread.
+    /// </summary>
+    /// <param name="sender">The folder watcher that raised the event.</param>
+    /// <param name="e">Event data supplied by the folder watcher.</param>
     private void FolderWatcher_FolderChanged(
         object? sender,
         EventArgs e) {
@@ -1496,6 +1701,9 @@ public partial class MainWindow : Window {
             ScheduleFolderRefresh);
     }
 
+    /// <summary>
+    /// Cancels any pending folder refresh and starts a new debounced refresh operation.
+    /// </summary>
     private void ScheduleFolderRefresh() {
         folderRefreshCancellation?.Cancel();
 
@@ -1511,6 +1719,12 @@ public partial class MainWindow : Window {
             cancellationToken);
     }
 
+    /// <summary>
+    /// Waits briefly after a file-system event before refreshing the current folder,
+    /// allowing bursts of file-system notifications to be processed as one update.
+    /// </summary>
+    /// <param name="cancellationToken">Token used to cancel superseded refresh requests.</param>
+    /// <returns>A task representing the debounced refresh operation.</returns>
     private async Task DebouncedFolderRefreshAsync(
         CancellationToken cancellationToken) {
         try {
@@ -1530,6 +1744,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Converts the window's internal sort-field representation to the persisted
+    /// application-state representation.
+    /// </summary>
+    /// <returns>The corresponding persisted file-sort field.</returns>
     private FileSortField GetFileSortField() {
         switch (currentSortField) {
             case SortField.FileName:
@@ -1550,6 +1769,11 @@ public partial class MainWindow : Window {
         }
     }
 
+    /// <summary>
+    /// Persists the current window state and releases event subscriptions, watchers
+    /// and cancellation resources when the main window closes.
+    /// </summary>
+    /// <param name="e">Event data supplied by WPF.</param>
     protected override void OnClosed(
         EventArgs e) {
         windowStateService.Save(

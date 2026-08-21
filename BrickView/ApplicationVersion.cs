@@ -12,6 +12,9 @@ using System.Reflection;
 namespace BrickView;
 
 public static class ApplicationVersion {
+    /// <summary>
+    /// Gets the application version formatted for display in the BrickView UI.
+    /// </summary>
     public static string DisplayName {
         get {
             Version? version =

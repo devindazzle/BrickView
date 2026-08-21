@@ -1,14 +1,15 @@
 ﻿// -----------------------------------------------------------------------------
 // FolderDiffService.cs
 //
-// Compares BrickView's existing file items with the files currently present
+// Compares BrickView's existing model items with the files currently present
 // in a monitored folder.
 //
 // The service detects added, removed, modified, unchanged and renamed files.
 // Rename detection uses the stable ModelIdentity assigned to IoFileListItem.
 //
-// File identity lookups are performed asynchronously so that large folders do
-// not cause Windows file-system operations to block the UI thread.
+// File identity lookups are performed asynchronously with controlled
+// parallelism so large folders do not create unnecessary pressure on the
+// file system or block the UI thread.
 // -----------------------------------------------------------------------------
 
 using System.IO;
@@ -18,6 +19,12 @@ namespace BrickView;
 public sealed class FolderDiffService {
     private readonly WindowsFileIdentityProvider fileIdentityProvider;
 
+    /// <summary>
+    /// Creates a folder-diff service using the supplied file identity provider.
+    /// </summary>
+    /// <param name="fileIdentityProvider">
+    /// Provides stable identities used to detect renamed models.
+    /// </param>
     public FolderDiffService(
         WindowsFileIdentityProvider fileIdentityProvider) {
         ArgumentNullException.ThrowIfNull(
@@ -27,10 +34,32 @@ public sealed class FolderDiffService {
             fileIdentityProvider;
     }
 
+    /// <summary>
+    /// Compares the existing model items with the files currently present in
+    /// the monitored folder.
+    /// </summary>
+    /// <param name="existingItems">
+    /// The model items currently known by BrickView.
+    /// </param>
+    /// <param name="currentFiles">
+    /// The files currently found in the monitored folder.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Cancels the comparison and any outstanding identity lookups.
+    /// </param>
+    /// <returns>
+    /// A FolderDiff containing all detected changes.
+    /// </returns>
     public async Task<FolderDiff> CompareAsync(
         IEnumerable<IoFileListItem> existingItems,
         IEnumerable<string> currentFiles,
         CancellationToken cancellationToken = default) {
+        ArgumentNullException.ThrowIfNull(
+            existingItems);
+
+        ArgumentNullException.ThrowIfNull(
+            currentFiles);
+
         List<IoFileListItem> existingItemList =
             existingItems.ToList();
 
@@ -50,6 +79,8 @@ public sealed class FolderDiffService {
         List<string> addedFiles =
             new List<string>();
 
+        // Compare files that currently exist with the model items already
+        // known to BrickView.
         foreach (string filePath in currentFileSet) {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -63,27 +94,27 @@ public sealed class FolderDiffService {
             }
 
             FileInfo fileInfo =
-                new FileInfo(filePath);
+                new FileInfo(
+                    filePath);
 
-            if (fileInfo.Length != existingItem.FileSize ||
+            bool fileModified =
+                fileInfo.Length !=
+                    existingItem.FileSize ||
                 fileInfo.LastWriteTimeUtc !=
-                    existingItem.LastWriteTimeUtc) {
-                changes.Add(
-                    new FileChange(
-                        FileChangeType.Modified,
-                        filePath));
-            }
-            else {
-                changes.Add(
-                    new FileChange(
-                        FileChangeType.Unchanged,
-                        filePath));
-            }
+                    existingItem.LastWriteTimeUtc;
+
+            changes.Add(
+                new FileChange(
+                    fileModified
+                        ? FileChangeType.Modified
+                        : FileChangeType.Unchanged,
+                    filePath));
         }
 
         List<IoFileListItem> removedItems =
             new List<IoFileListItem>();
 
+        // Find model items whose files are no longer present in the folder.
         foreach (IoFileListItem existingItem
                  in existingItemList) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -95,12 +126,15 @@ public sealed class FolderDiffService {
             }
         }
 
+        // Added and removed files can represent a rename. Resolve identities
+        // before reporting them as independent add/remove operations.
         await DetectRenamesAsync(
             addedFiles,
             removedItems,
             changes,
             cancellationToken);
 
+        // Any added file that was not matched as a rename is a genuine addition.
         foreach (string filePath in addedFiles) {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -122,6 +156,8 @@ public sealed class FolderDiffService {
             }
         }
 
+        // Any removed model that was not matched as a rename is a genuine
+        // removal.
         foreach (IoFileListItem removedItem
                  in removedItems) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -148,6 +184,22 @@ public sealed class FolderDiffService {
             changes);
     }
 
+    /// <summary>
+    /// Matches newly added files with removed model items by stable model
+    /// identity in order to detect renames.
+    /// </summary>
+    /// <param name="addedFiles">
+    /// Files that appeared in the current folder state.
+    /// </param>
+    /// <param name="removedItems">
+    /// Previously known model items whose paths disappeared.
+    /// </param>
+    /// <param name="changes">
+    /// The collection receiving detected rename changes.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Cancels the identity resolution process.
+    /// </param>
     private async Task DetectRenamesAsync(
         IReadOnlyList<string> addedFiles,
         IReadOnlyList<IoFileListItem> removedItems,
@@ -173,10 +225,8 @@ public sealed class FolderDiffService {
                         item.ModelIdentity!.Value,
                     StringComparer.Ordinal);
 
-        HashSet<string> matchedRemovedPaths =
-            new HashSet<string>(
-                StringComparer.OrdinalIgnoreCase);
-
+        // Match each newly added file against the stable identity of a removed
+        // model. A match means the model was renamed rather than replaced.
         foreach (KeyValuePair<string, string> addedFile
                  in addedFileIdentities) {
             cancellationToken.ThrowIfCancellationRequested();
@@ -192,12 +242,22 @@ public sealed class FolderDiffService {
                     FileChangeType.Renamed,
                     addedFile.Key,
                     removedItem.FilePath));
-
-            matchedRemovedPaths.Add(
-                removedItem.FilePath);
         }
     }
 
+    /// <summary>
+    /// Resolves stable model identities for a collection of file paths using
+    /// controlled parallelism.
+    /// </summary>
+    /// <param name="filePaths">
+    /// The files whose stable identities should be resolved.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Cancels outstanding identity resolution.
+    /// </param>
+    /// <returns>
+    /// A dictionary mapping file paths to their stable model identities.
+    /// </returns>
     private async Task<Dictionary<string, string>>
         GetFileIdentitiesAsync(
             IReadOnlyList<string> filePaths,
@@ -206,9 +266,8 @@ public sealed class FolderDiffService {
             new Dictionary<string, string>(
                 StringComparer.OrdinalIgnoreCase);
 
-        // Identity lookups use a small amount of controlled parallelism rather
-        // than starting one unbounded task per file. This prevents a large
-        // folder from creating unnecessary pressure on the file system.
+        // Limit the number of simultaneous file-system identity lookups so
+        // large folders do not create an unbounded number of tasks.
         using SemaphoreSlim semaphore =
             new SemaphoreSlim(8);
 
@@ -221,15 +280,12 @@ public sealed class FolderDiffService {
             await semaphore.WaitAsync(
                 cancellationToken);
 
-            Task task =
+            tasks.Add(
                 LoadFileIdentityAsync(
                     filePath,
                     identities,
                     semaphore,
-                    cancellationToken);
-
-            tasks.Add(
-                task);
+                    cancellationToken));
         }
 
         await Task.WhenAll(
@@ -238,6 +294,22 @@ public sealed class FolderDiffService {
         return identities;
     }
 
+    /// <summary>
+    /// Resolves one file's stable model identity and adds the result to the
+    /// shared identity collection.
+    /// </summary>
+    /// <param name="filePath">
+    /// The file whose identity should be resolved.
+    /// </param>
+    /// <param name="identities">
+    /// The shared identity collection populated by the parallel operations.
+    /// </param>
+    /// <param name="semaphore">
+    /// Controls the number of concurrent identity lookups.
+    /// </param>
+    /// <param name="cancellationToken">
+    /// Cancels the identity lookup.
+    /// </param>
     private async Task LoadFileIdentityAsync(
         string filePath,
         Dictionary<string, string> identities,

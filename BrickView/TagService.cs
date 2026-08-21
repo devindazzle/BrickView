@@ -4,27 +4,33 @@
 // Provides the runtime business logic for BrickView's tag system and
 // model-level metadata.
 //
-// The service keeps tag data and Favorite state in memory so lookups never
-// require disk I/O. Persistent storage is handled by TagPersistenceService.
+// Responsibilities:
+// - Manages the reusable tag catalog.
+// - Manages model-to-tag relationships.
+// - Manages model Favorite state.
+// - Enforces the maximum of three tags per model.
+// - Normalizes tag names through TagDefinition.
+// - Coordinates persistence of model metadata.
+// - Removes a tag globally from the tag catalog and every model that uses it.
+// - Handles migration of persisted model identity when a model is renamed or
+//   otherwise receives a new stable identity.
 //
-// Responsibilities include:
-// - Managing the reusable tag catalog.
-// - Managing model-to-tag relationships.
-// - Managing model Favorite state.
-// - Enforcing the maximum of three tags per model.
-// - Normalizing tags through TagDefinition.
-// - Persisting model metadata to the tag store.
-// - Removing a tag globally from the tag catalog and every model that uses it.
+// TagService keeps tag and Favorite data in memory so normal lookups do not
+// require disk I/O. Persistent storage is handled by TagPersistenceService.
 //
 // Favorites are model metadata and are deliberately kept separate from tags.
 // Both are persisted using the same stable ModelIdentity-based model entry.
 //
-// Global tag deletion is deliberately handled here rather than in the UI so
-// the operation remains consistent regardless of where it is initiated.
+// Global tag deletion is handled here rather than in the UI so the operation
+// remains consistent regardless of where it is initiated.
 // -----------------------------------------------------------------------------
 
 namespace BrickView;
 
+/// <summary>
+/// Provides the runtime business logic for BrickView's tag system and
+/// model-level metadata.
+/// </summary>
 public sealed class TagService {
     private readonly TagPersistenceService persistenceService;
 
@@ -34,6 +40,16 @@ public sealed class TagService {
 
     private readonly HashSet<string> favoriteModelIdentities;
 
+    /// <summary>
+    /// Initializes the tag service and loads the persisted tag and model
+    /// metadata.
+    /// </summary>
+    /// <param name="persistenceService">
+    /// The service responsible for loading and saving the persistent tag store.
+    /// </param>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="persistenceService"/> is null.
+    /// </exception>
     public TagService(
         TagPersistenceService persistenceService) {
         ArgumentNullException.ThrowIfNull(
@@ -56,10 +72,30 @@ public sealed class TagService {
         Load();
     }
 
+    /// <summary>
+    /// Gets all tag definitions currently known to the application.
+    /// </summary>
+    /// <returns>
+    /// A read-only collection containing all known tag definitions.
+    /// </returns>
     public IReadOnlyCollection<TagDefinition> GetAllTags() {
         return tagCatalog.Tags;
     }
 
+    /// <summary>
+    /// Attempts to find a tag definition by name.
+    /// </summary>
+    /// <param name="tagName">
+    /// The name of the tag to find.
+    /// </param>
+    /// <param name="tag">
+    /// When the method returns <see langword="true"/>, contains the matching
+    /// tag definition; otherwise, <see langword="null"/>.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when a matching tag exists; otherwise,
+    /// <see langword="false"/>.
+    /// </returns>
     public bool TryGetTag(
         string tagName,
         out TagDefinition? tag) {
@@ -68,6 +104,19 @@ public sealed class TagService {
             out tag);
     }
 
+    /// <summary>
+    /// Gets an existing tag definition or creates a new one.
+    /// </summary>
+    /// <param name="tagName">
+    /// The name of the tag to find or create.
+    /// </param>
+    /// <returns>
+    /// The existing or newly created tag definition.
+    /// </returns>
+    /// <remarks>
+    /// Creating a new tag or retrieving an existing tag through this method
+    /// causes the current tag store to be persisted.
+    /// </remarks>
     public TagDefinition GetOrCreateTag(
         string tagName) {
         TagDefinition tag =
@@ -79,6 +128,19 @@ public sealed class TagService {
         return tag;
     }
 
+    /// <summary>
+    /// Gets all tags assigned to the specified model.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model.
+    /// </param>
+    /// <returns>
+    /// A read-only list of the model's assigned tags, or an empty list when
+    /// no tags are assigned.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public IReadOnlyList<TagDefinition> GetTags(
         ModelIdentity modelIdentity) {
         ArgumentNullException.ThrowIfNull(
@@ -93,6 +155,19 @@ public sealed class TagService {
         return collection.Tags;
     }
 
+    /// <summary>
+    /// Determines whether the specified model is marked as a Favorite.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the model is marked as a Favorite;
+    /// otherwise, <see langword="false"/>.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public bool IsFavorite(
         ModelIdentity modelIdentity) {
         ArgumentNullException.ThrowIfNull(
@@ -102,6 +177,23 @@ public sealed class TagService {
             modelIdentity.Value);
     }
 
+    /// <summary>
+    /// Sets the Favorite state of the specified model.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model.
+    /// </param>
+    /// <param name="isFavorite">
+    /// <see langword="true"/> to mark the model as a Favorite;
+    /// <see langword="false"/> to remove the Favorite state.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the Favorite state changed; otherwise,
+    /// <see langword="false"/> when the requested state was already active.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public bool SetFavorite(
         ModelIdentity modelIdentity,
         bool isFavorite) {
@@ -125,11 +217,30 @@ public sealed class TagService {
             return false;
         }
 
+        // Persist only after an actual state change so redundant UI operations
+        // do not cause unnecessary disk writes.
         Save();
 
         return true;
     }
 
+    /// <summary>
+    /// Adds a tag to the specified model.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model.
+    /// </param>
+    /// <param name="tagName">
+    /// The name of the tag to assign.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the tag was added; otherwise,
+    /// <see langword="false"/> when the model already has the tag or has
+    /// reached the maximum number of tags.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public bool AddTag(
         ModelIdentity modelIdentity,
         string tagName) {
@@ -143,6 +254,7 @@ public sealed class TagService {
         if (!modelTags.TryGetValue(
                 modelIdentity.Value,
                 out ModelTagCollection? collection)) {
+
             collection =
                 new ModelTagCollection();
 
@@ -162,6 +274,22 @@ public sealed class TagService {
         return added;
     }
 
+    /// <summary>
+    /// Removes a tag from the specified model.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model.
+    /// </param>
+    /// <param name="tagName">
+    /// The name of the tag to remove.
+    /// </param>
+    /// <returns>
+    /// <see langword="true"/> when the tag was removed; otherwise,
+    /// <see langword="false"/> when the model does not have the tag.
+    /// </returns>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public bool RemoveTag(
         ModelIdentity modelIdentity,
         string tagName) {
@@ -186,6 +314,8 @@ public sealed class TagService {
             return false;
         }
 
+        // Empty model collections do not carry useful state and are therefore
+        // removed from the in-memory index.
         if (collection.Count == 0) {
             modelTags.Remove(
                 modelIdentity.Value);
@@ -196,6 +326,18 @@ public sealed class TagService {
         return true;
     }
 
+    /// <summary>
+    /// Gets the number of models currently using the specified tag.
+    /// </summary>
+    /// <param name="tagName">
+    /// The name of the tag to count.
+    /// </param>
+    /// <returns>
+    /// The number of models that currently use the tag.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="tagName"/> is null, empty or whitespace.
+    /// </exception>
     public int GetModelCountUsingTag(
         string tagName) {
         ArgumentException.ThrowIfNullOrWhiteSpace(
@@ -220,6 +362,23 @@ public sealed class TagService {
         return modelCount;
     }
 
+    /// <summary>
+    /// Deletes a tag globally from the tag catalog and every model using it.
+    /// </summary>
+    /// <param name="tagName">
+    /// The name of the tag to delete.
+    /// </param>
+    /// <returns>
+    /// The number of models from which the tag was removed.
+    /// </returns>
+    /// <exception cref="ArgumentException">
+    /// Thrown when <paramref name="tagName"/> is null, empty or whitespace.
+    /// </exception>
+    /// <remarks>
+    /// Models that become empty as a result of the deletion are removed from
+    /// the model-tag index. The operation is persisted once after all affected
+    /// data has been updated.
+    /// </remarks>
     public int DeleteTag(
         string tagName) {
         ArgumentException.ThrowIfNullOrWhiteSpace(
@@ -260,6 +419,8 @@ public sealed class TagService {
             affectedModelCount++;
 
             if (collection.Count == 0) {
+                // Defer dictionary removal until after enumeration has completed
+                // because the collection is currently being iterated.
                 emptyModelIdentities.Add(
                     entry.Key);
             }
@@ -280,6 +441,18 @@ public sealed class TagService {
         return affectedModelCount;
     }
 
+    /// <summary>
+    /// Removes all persisted metadata associated with the specified model.
+    /// </summary>
+    /// <param name="modelIdentity">
+    /// The stable identity of the model to remove.
+    /// </param>
+    /// <remarks>
+    /// Both tag assignments and Favorite state are removed.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when <paramref name="modelIdentity"/> is null.
+    /// </exception>
     public void RemoveModel(
         ModelIdentity modelIdentity) {
         ArgumentNullException.ThrowIfNull(
@@ -301,6 +474,22 @@ public sealed class TagService {
         Save();
     }
 
+    /// <summary>
+    /// Moves persisted model metadata from one stable model identity to another.
+    /// </summary>
+    /// <param name="oldModelIdentity">
+    /// The previous stable model identity.
+    /// </param>
+    /// <param name="newModelIdentity">
+    /// The new stable model identity.
+    /// </param>
+    /// <remarks>
+    /// Both tag assignments and Favorite state are moved. When no metadata
+    /// exists for the old identity, no persistence operation is performed.
+    /// </remarks>
+    /// <exception cref="ArgumentNullException">
+    /// Thrown when either model identity is null.
+    /// </exception>
     public void UpdateModelIdentity(
         ModelIdentity oldModelIdentity,
         ModelIdentity newModelIdentity) {
@@ -351,6 +540,10 @@ public sealed class TagService {
         Save();
     }
 
+    /// <summary>
+    /// Serializes the current in-memory tag catalog and model metadata and
+    /// delegates persistence to <see cref="TagPersistenceService"/>.
+    /// </summary>
     public void Save() {
         TagStore store =
             new TagStore();
@@ -361,6 +554,8 @@ public sealed class TagService {
                 tag.Name);
         }
 
+        // A model must be persisted when it has either tags or Favorite state.
+        // Combining both sets ensures that Favorite-only models are not lost.
         HashSet<string> modelIdentities =
             new HashSet<string>(
                 modelTags.Keys,
@@ -397,6 +592,13 @@ public sealed class TagService {
             store);
     }
 
+    /// <summary>
+    /// Loads persisted tag and model metadata into the in-memory indexes.
+    /// </summary>
+    /// <remarks>
+    /// Invalid or incomplete persisted model entries are ignored rather than
+    /// preventing the remainder of the valid store from being loaded.
+    /// </remarks>
     private void Load() {
         TagStore store =
             persistenceService.Load();

@@ -13,34 +13,68 @@
 // - A leading '-' negates a criterion.
 // - Quoted text is treated as one search token.
 //
+// Responsibilities:
+// - Converts raw search text into SmartSearchCriterion instances.
+// - Identifies supported search fields and special "is:" expressions.
+// - Handles negated criteria.
+// - Preserves quoted text as a single search token.
+//
 // The query parser contains no UI or persistence responsibilities.
+// SmartSearchEngine is responsible for evaluating the parsed criteria against
+// BrickView model items.
 // -----------------------------------------------------------------------------
 
 namespace BrickView;
 
+/// <summary>
+/// Represents a parsed Smart Search query and its individual search criteria.
+/// </summary>
 public sealed class SmartSearchQuery {
+    /// <summary>
+    /// Gets an empty search query containing no criteria.
+    /// </summary>
     public static SmartSearchQuery Empty {
         get;
     } =
         new SmartSearchQuery(
             Array.Empty<SmartSearchCriterion>());
 
+    /// <summary>
+    /// Initializes a parsed search query with the supplied criteria.
+    /// </summary>
+    /// <param name="criteria">
+    /// The search criteria represented by the query.
+    /// </param>
     private SmartSearchQuery(
         IReadOnlyList<SmartSearchCriterion> criteria) {
         Criteria =
             criteria;
     }
 
+    /// <summary>
+    /// Gets the individual criteria contained in the parsed query.
+    /// </summary>
     public IReadOnlyList<SmartSearchCriterion> Criteria {
         get;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the query contains no search criteria.
+    /// </summary>
     public bool IsEmpty {
         get {
             return Criteria.Count == 0;
         }
     }
 
+    /// <summary>
+    /// Gets a value indicating whether evaluating this query may require
+    /// model data beyond the model name.
+    /// </summary>
+    /// <remarks>
+    /// Name-only criteria can be evaluated from the model name alone.
+    /// Other criteria may require tags or Favorite state.
+    /// </remarks>
     public bool RequiresModelData {
         get {
             return Criteria.Any(
@@ -50,6 +84,17 @@ public sealed class SmartSearchQuery {
         }
     }
 
+    /// <summary>
+    /// Parses raw Smart Search text into a structured query.
+    /// </summary>
+    /// <param name="searchText">
+    /// The text entered by the user. Null, empty and whitespace-only input
+    /// produces <see cref="Empty"/>.
+    /// </param>
+    /// <returns>
+    /// A parsed <see cref="SmartSearchQuery"/> containing the recognized
+    /// search criteria.
+    /// </returns>
     public static SmartSearchQuery Parse(
         string? searchText) {
         if (string.IsNullOrWhiteSpace(
@@ -81,6 +126,16 @@ public sealed class SmartSearchQuery {
             criteria);
     }
 
+    /// <summary>
+    /// Parses one token into a search criterion.
+    /// </summary>
+    /// <param name="token">
+    /// The individual token extracted from the search text.
+    /// </param>
+    /// <returns>
+    /// A parsed criterion, or <see langword="null"/> when the token does not
+    /// contain a usable search expression.
+    /// </returns>
     private static SmartSearchCriterion? ParseToken(
         string token) {
         if (string.IsNullOrWhiteSpace(
@@ -91,6 +146,8 @@ public sealed class SmartSearchQuery {
         bool isNegated =
             token[0] == '-';
 
+        // Remove the leading negation marker before interpreting the field
+        // and value. The negation state is retained separately on the criterion.
         string expression =
             isNegated
                 ? token[1..]
@@ -152,6 +209,8 @@ public sealed class SmartSearchQuery {
 
             default:
 
+                // Unknown field prefixes are treated as ordinary text so an
+                // unsupported search expression does not silently disappear.
                 return new SmartSearchCriterion(
                     SmartSearchField.Text,
                     expression,
@@ -159,6 +218,19 @@ public sealed class SmartSearchQuery {
         }
     }
 
+    /// <summary>
+    /// Parses the value of an <c>is:</c> search expression.
+    /// </summary>
+    /// <param name="value">
+    /// The value following the <c>is:</c> prefix.
+    /// </param>
+    /// <param name="isNegated">
+    /// Indicates whether the complete expression was prefixed with '-'.
+    /// </param>
+    /// <returns>
+    /// A Favorite criterion for supported values, or a text criterion when
+    /// the <c>is:</c> value is unknown.
+    /// </returns>
     private static SmartSearchCriterion? ParseIsCriterion(
         string value,
         bool isNegated) {
@@ -174,6 +246,8 @@ public sealed class SmartSearchQuery {
         if (value.Equals(
                 "not-favorite",
                 StringComparison.OrdinalIgnoreCase)) {
+            // "is:not-favorite" already expresses the negative Favorite state.
+            // An additional leading '-' therefore reverses that state.
             return new SmartSearchCriterion(
                 SmartSearchField.Favorite,
                 string.Empty,
@@ -186,6 +260,16 @@ public sealed class SmartSearchQuery {
             isNegated);
     }
 
+    /// <summary>
+    /// Splits search text into tokens while keeping text enclosed in double
+    /// quotes together as one token.
+    /// </summary>
+    /// <param name="searchText">
+    /// The raw search text to tokenize.
+    /// </param>
+    /// <returns>
+    /// The individual search tokens in their original order.
+    /// </returns>
     private static IEnumerable<string> Tokenize(
         string searchText) {
         List<string> tokens =
@@ -207,6 +291,8 @@ public sealed class SmartSearchQuery {
                 continue;
             }
 
+            // Whitespace separates tokens only when it occurs outside a
+            // quoted expression.
             if (char.IsWhiteSpace(character) &&
                 !insideQuotes) {
 
@@ -233,14 +319,47 @@ public sealed class SmartSearchQuery {
     }
 }
 
+/// <summary>
+/// Identifies the field against which a Smart Search criterion should be evaluated.
+/// </summary>
 public enum SmartSearchField {
+    /// <summary>
+    /// Performs a general text search against model name and tags.
+    /// </summary>
     Text,
+
+    /// <summary>
+    /// Searches the model name only.
+    /// </summary>
     Name,
+
+    /// <summary>
+    /// Searches assigned tag names.
+    /// </summary>
     Tag,
+
+    /// <summary>
+    /// Searches the model's Favorite state.
+    /// </summary>
     Favorite
 }
 
+/// <summary>
+/// Represents one parsed Smart Search criterion.
+/// </summary>
 public sealed class SmartSearchCriterion {
+    /// <summary>
+    /// Initializes a search criterion.
+    /// </summary>
+    /// <param name="field">
+    /// The field against which the criterion should be evaluated.
+    /// </param>
+    /// <param name="value">
+    /// The value to match.
+    /// </param>
+    /// <param name="isNegated">
+    /// Indicates whether the criterion is negated.
+    /// </param>
     public SmartSearchCriterion(
         SmartSearchField field,
         string value,
@@ -255,14 +374,23 @@ public sealed class SmartSearchCriterion {
             isNegated;
     }
 
+    /// <summary>
+    /// Gets the field against which the criterion should be evaluated.
+    /// </summary>
     public SmartSearchField Field {
         get;
     }
 
+    /// <summary>
+    /// Gets the value used when evaluating the criterion.
+    /// </summary>
     public string Value {
         get;
     }
 
+    /// <summary>
+    /// Gets a value indicating whether the criterion is negated.
+    /// </summary>
     public bool IsNegated {
         get;
     }

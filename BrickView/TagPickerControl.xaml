@@ -1,14 +1,22 @@
 ﻿<!--
     TagPickerControl.xaml
     
-    Provides the compact tag picker used by BrickView model cards.
+    Defines the compact tag-picker interface used by BrickView model cards.
     
-    The control displays existing reusable tags as compact chip-tags in a
-    wrapping layout and provides an option to create a new tag directly from
-    the picker.
+    Responsibilities:
+    - Displays the reusable tags available in the shared tag catalog.
+    - Provides a search field for filtering available tags.
+    - Displays tags as compact, color-coded chip controls.
+    - Allows an existing tag to be assigned to the current model.
+    - Allows an existing tag to be deleted.
+    - Provides an option to create a new tag directly from the picker.
     
-    Tag colors are taken directly from TagDefinition so every tag has the
-    same appearance in the picker and on model cards.
+    Tag colors are taken directly from TagDefinition so the same tag keeps
+    the same visual appearance in the picker and on model cards.
+    
+    The XAML defines presentation and interaction wiring only. Tag management,
+    filtering and persistence logic belong to TagPickerControl.xaml.cs and the
+    corresponding tag services.
 -->
 
 <UserControl

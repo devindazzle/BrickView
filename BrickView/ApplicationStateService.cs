@@ -1,20 +1,36 @@
-﻿using System.IO;
+﻿// -----------------------------------------------------------------------------
+// ApplicationStateService.cs
+//
+// Provides persistent storage for BrickView's application-level state.
+//
+// The service stores the state in the user's local application-data folder as
+// a JSON file. It is responsible only for serializing and deserializing
+// ApplicationState; the ApplicationState model itself contains the actual
+// persisted values.
+//
+// Persistence failures are intentionally handled without propagating
+// exceptions so that a damaged or unavailable state file cannot prevent
+// BrickView from starting or shutting down normally.
+// -----------------------------------------------------------------------------
+
+using System.IO;
 using System.Text.Json;
 
 namespace BrickView;
 
-public sealed class ApplicationStateService
-{
+public sealed class ApplicationStateService {
     private readonly string stateFilePath;
 
     private readonly JsonSerializerOptions jsonSerializerOptions =
-        new JsonSerializerOptions
-        {
+        new JsonSerializerOptions {
             WriteIndented = true
         };
 
-    public ApplicationStateService()
-    {
+    /// <summary>
+    /// Initializes the service and determines the location of the persistent
+    /// application state file.
+    /// </summary>
+    public ApplicationStateService() {
         string applicationDataFolder =
             Path.Combine(
                 Environment.GetFolderPath(
@@ -30,13 +46,16 @@ public sealed class ApplicationStateService
                 "state.json");
     }
 
-    public ApplicationState? Load()
-    {
-        try
-        {
+    /// <summary>
+    /// Loads the previously persisted application state.
+    /// </summary>
+    /// <returns>
+    /// The stored application state, or null when no valid state is available.
+    /// </returns>
+    public ApplicationState? Load() {
+        try {
             if (!File.Exists(
-                    stateFilePath))
-            {
+                    stateFilePath)) {
                 return null;
             }
 
@@ -48,17 +67,26 @@ public sealed class ApplicationStateService
                 json,
                 jsonSerializerOptions);
         }
-        catch
-        {
+        catch {
+            // A missing, invalid or unreadable state file should not prevent
+            // BrickView from starting. The application can fall back to its
+            // default state.
             return null;
         }
     }
 
+    /// <summary>
+    /// Persists the supplied application state as formatted JSON.
+    /// </summary>
+    /// <param name="state">
+    /// The application state to persist.
+    /// </param>
     public void Save(
-        ApplicationState state)
-    {
-        try
-        {
+        ApplicationState state) {
+        ArgumentNullException.ThrowIfNull(
+            state);
+
+        try {
             string json =
                 JsonSerializer.Serialize(
                     state,
@@ -68,10 +96,8 @@ public sealed class ApplicationStateService
                 stateFilePath,
                 json);
         }
-        catch
-        {
-            // Persistence must never make
-            // application shutdown fail.
+        catch {
+            // Persistence must never make application shutdown fail.
         }
     }
 }

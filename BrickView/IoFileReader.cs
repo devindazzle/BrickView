@@ -1,7 +1,7 @@
 ﻿// ============================================================================
 // IoFileReader.cs
 //
-// Responsible for reading LEGO BrickLink Studio .io files.
+// Reads LEGO BrickLink Studio .io files.
 //
 // Studio .io files are ZIP-based containers. Older Studio files may contain
 // password-protected ZIP entries using PKZIP/ZipCrypto encryption. SharpZipLib
@@ -10,6 +10,11 @@
 //
 // The legacy Studio password is applied only when an individual ZIP entry is
 // encrypted. Unencrypted .io files continue to be read normally.
+//
+// The reader provides three operations:
+// - Validate an .io file and detect whether it contains a thumbnail.
+// - Read the thumbnail PNG data.
+// - Read model metadata and validate the part count.
 //
 // Copyright (c) 2026 BrickView
 // Licensed under the MIT License.
@@ -29,26 +34,26 @@ public class IoFileReader {
         "soho0909";
 
     /// <summary>
-    /// Performs a basic validation of an .io file and determines
-    /// whether it contains a thumbnail.
+    /// Validates an .io file and determines whether it contains a thumbnail.
     /// </summary>
     /// <param name="filePath">
     /// Full path to the .io file.
     /// </param>
     /// <returns>
-    /// An IoReadResult describing whether the file could be read
-    /// and whether a thumbnail entry was found.
+    /// An IoReadResult describing whether the file could be read and whether
+    /// a thumbnail entry was found.
     /// </returns>
     public IoReadResult Read(
         string filePath) {
         try {
             using (ZipFile archive =
                    new ZipFile(filePath)) {
-                bool thumbnailFound = false;
 
-                // A thumbnail is optional in a Studio .io file.
-                // We therefore inspect the archive rather than treating
-                // a missing thumbnail as an invalid file.
+                bool thumbnailFound =
+                    false;
+
+                // A thumbnail is optional in a Studio .io file. Inspect the
+                // archive rather than treating a missing thumbnail as invalid.
                 foreach (ZipEntry entry
                          in archive) {
                     string fileName =
@@ -59,7 +64,10 @@ public class IoFileReader {
                         fileName,
                         "thumbnail.png",
                         StringComparison.OrdinalIgnoreCase)) {
-                        thumbnailFound = true;
+
+                        thumbnailFound =
+                            true;
+
                         break;
                     }
                 }
@@ -92,8 +100,8 @@ public class IoFileReader {
         }
         catch (ZipException) {
             // SharpZipLib reports malformed or unreadable ZIP containers
-            // through ZipException. From BrickView's perspective this means
-            // that the .io file cannot be interpreted as a valid container.
+            // through ZipException. BrickView treats these as invalid .io
+            // containers.
             return new IoReadResult(
                 IoReadStatus.InvalidZip,
                 false,
@@ -110,45 +118,49 @@ public class IoFileReader {
     }
 
     /// <summary>
-    /// Reads the thumbnail from a Studio .io file.
+    /// Reads the thumbnail PNG from a Studio .io file.
     /// </summary>
     /// <param name="filePath">
     /// Full path to the .io file.
     /// </param>
     /// <returns>
-    /// A ThumbnailReadResult containing the PNG data when a thumbnail
-    /// is available.
+    /// A ThumbnailReadResult containing the PNG data when a thumbnail is
+    /// available.
     /// </returns>
     public ThumbnailReadResult ReadThumbnail(
         string filePath) {
         try {
             using (ZipFile archive =
                    new ZipFile(filePath)) {
+
                 foreach (ZipEntry entry
                          in archive) {
                     string fileName =
                         Path.GetFileName(
                             entry.Name);
 
-                    if (string.Equals(
+                    if (!string.Equals(
                         fileName,
                         "thumbnail.png",
                         StringComparison.OrdinalIgnoreCase)) {
-                        // OpenEntryStream transparently handles both
-                        // encrypted and unencrypted ZIP entries.
-                        using (Stream stream =
-                               OpenEntryStream(
-                                   archive,
-                                   entry))
-                        using (MemoryStream memoryStream =
-                               new MemoryStream()) {
-                            stream.CopyTo(
-                                memoryStream);
+                        continue;
+                    }
 
-                            return new ThumbnailReadResult(
-                                ThumbnailReadStatus.Loaded,
-                                memoryStream.ToArray());
-                        }
+                    // OpenEntryStream handles both encrypted and unencrypted
+                    // ZIP entries transparently.
+                    using (Stream stream =
+                           OpenEntryStream(
+                               archive,
+                               entry))
+                    using (MemoryStream memoryStream =
+                           new MemoryStream()) {
+
+                        stream.CopyTo(
+                            memoryStream);
+
+                        return new ThumbnailReadResult(
+                            ThumbnailReadStatus.Loaded,
+                            memoryStream.ToArray());
                     }
                 }
 
@@ -192,21 +204,23 @@ public class IoFileReader {
     /// <summary>
     /// Reads model metadata from a Studio .io file.
     ///
-    /// Metadata is primarily read from the .info entry. The model.ldr
-    /// file is also inspected to obtain a part count when necessary.
+    /// Metadata is primarily read from the .info entry. The model.ldr file is
+    /// also inspected to obtain a part count when necessary or to validate a
+    /// part count already reported by .info.
     /// </summary>
     /// <param name="filePath">
     /// Full path to the .io file.
     /// </param>
     /// <returns>
-    /// The available model metadata, or null when no usable metadata
-    /// could be read.
+    /// The available model metadata, or null when no usable metadata could be
+    /// read.
     /// </returns>
     public IoModelMetadata? ReadMetadata(
         string filePath) {
         try {
             using (ZipFile archive =
                    new ZipFile(filePath)) {
+
                 IoModelMetadata? infoMetadata =
                     ReadInfoMetadata(
                         archive);
@@ -228,11 +242,11 @@ public class IoFileReader {
                 PartCountValidation validation =
                     PartCountValidation.Unknown;
 
-                // When both sources provide a part count, compare them.
-                // This allows BrickView to detect inconsistencies between
-                // the metadata and the actual model information.
+                // When both sources provide a part count, compare them so
+                // inconsistencies can be surfaced by the metadata model.
                 if (partCount.HasValue &&
                     lDrawPartCount.HasValue) {
+
                     validation =
                         partCount.Value ==
                         lDrawPartCount.Value
@@ -241,8 +255,9 @@ public class IoFileReader {
                 }
                 else if (!partCount.HasValue &&
                          lDrawPartCount.HasValue) {
-                    // Use the LDraw count as a fallback when .info does not
-                    // contain a part count.
+
+                    // Fall back to the count from model.ldr when .info does
+                    // not contain a part count.
                     partCount =
                         lDrawPartCount;
                 }
@@ -275,9 +290,9 @@ public class IoFileReader {
     /// <summary>
     /// Opens a ZIP entry for reading.
     ///
-    /// Studio files can contain both encrypted and unencrypted entries.
-    /// The legacy Studio password is therefore only assigned when the
-    /// specific entry reports that it is encrypted.
+    /// Studio files can contain both encrypted and unencrypted entries. The
+    /// legacy Studio password is therefore only assigned when the specific
+    /// entry reports that it is encrypted.
     /// </summary>
     /// <param name="archive">
     /// The ZIP archive containing the entry.
@@ -293,8 +308,8 @@ public class IoFileReader {
         ZipEntry entry) {
         if (entry.IsCrypted) {
             // Older Studio files use PKZIP/ZipCrypto encryption.
-            // SharpZipLib requires the password to be supplied to the
-            // archive before an encrypted entry can be read.
+            // SharpZipLib requires the password to be supplied before an
+            // encrypted entry can be read.
             archive.Password =
                 StudioPassword;
         }
@@ -306,15 +321,15 @@ public class IoFileReader {
     /// <summary>
     /// Reads the .info metadata entry from a Studio archive.
     ///
-    /// The .info file contains information such as the Studio version,
-    /// total part count and parts database version.
+    /// The .info file contains information such as the Studio version, total
+    /// part count and parts database version.
     /// </summary>
     /// <param name="archive">
     /// The open Studio ZIP archive.
     /// </param>
     /// <returns>
-    /// Parsed metadata, or null when the .info entry is unavailable
-    /// or cannot be parsed.
+    /// Parsed metadata, or null when the .info entry is unavailable or cannot
+    /// be parsed.
     /// </returns>
     private static IoModelMetadata? ReadInfoMetadata(
         ZipFile archive) {
@@ -331,6 +346,7 @@ public class IoFileReader {
                 fileName,
                 ".info",
                 StringComparison.OrdinalIgnoreCase)) {
+
                 metadataEntry =
                     entry;
 
@@ -346,64 +362,67 @@ public class IoFileReader {
             using (Stream stream =
                    OpenEntryStream(
                        archive,
-                       metadataEntry)) {
-                using (JsonDocument document =
-                       JsonDocument.Parse(stream)) {
-                    JsonElement root =
-                        document.RootElement;
+                       metadataEntry))
+            using (JsonDocument document =
+                   JsonDocument.Parse(stream)) {
 
-                    string? studioVersion =
-                        null;
+                JsonElement root =
+                    document.RootElement;
 
-                    // Studio version is stored as a JSON string.
-                    if (root.TryGetProperty(
-                            "version",
-                            out JsonElement versionElement) &&
-                        versionElement.ValueKind ==
-                            JsonValueKind.String) {
-                        studioVersion =
-                            versionElement.GetString();
-                    }
+                string? studioVersion =
+                    null;
 
-                    int? partCount =
-                        null;
+                // Studio version is stored as a JSON string.
+                if (root.TryGetProperty(
+                        "version",
+                        out JsonElement versionElement) &&
+                    versionElement.ValueKind ==
+                        JsonValueKind.String) {
 
-                    // total_parts contains the part count reported
-                    // by Studio when the file was saved.
-                    if (root.TryGetProperty(
-                            "total_parts",
-                            out JsonElement partCountElement) &&
-                        partCountElement.ValueKind ==
-                            JsonValueKind.Number &&
-                        partCountElement.TryGetInt32(
-                            out int parsedPartCount)) {
-                        partCount =
-                            parsedPartCount;
-                    }
-
-                    int? partsDatabaseVersion =
-                        null;
-
-                    // parts_db_version identifies the Studio parts
-                    // database version used when the model was saved.
-                    if (root.TryGetProperty(
-                            "parts_db_version",
-                            out JsonElement partsDatabaseElement) &&
-                        partsDatabaseElement.ValueKind ==
-                            JsonValueKind.Number &&
-                        partsDatabaseElement.TryGetInt32(
-                            out int parsedPartsDatabaseVersion)) {
-                        partsDatabaseVersion =
-                            parsedPartsDatabaseVersion;
-                    }
-
-                    return new IoModelMetadata(
-                        partCount,
-                        studioVersion,
-                        partsDatabaseVersion,
-                        null,
-                        PartCountValidation.Unknown);
+                    studioVersion =
+                        versionElement.GetString();
                 }
+
+                int? partCount =
+                    null;
+
+                // total_parts contains the part count reported by Studio
+                // when the file was saved.
+                if (root.TryGetProperty(
+                        "total_parts",
+                        out JsonElement partCountElement) &&
+                    partCountElement.ValueKind ==
+                        JsonValueKind.Number &&
+                    partCountElement.TryGetInt32(
+                        out int parsedPartCount)) {
+
+                    partCount =
+                        parsedPartCount;
+                }
+
+                int? partsDatabaseVersion =
+                    null;
+
+                // parts_db_version identifies the Studio parts database
+                // version used when the model was saved.
+                if (root.TryGetProperty(
+                        "parts_db_version",
+                        out JsonElement partsDatabaseElement) &&
+                    partsDatabaseElement.ValueKind ==
+                        JsonValueKind.Number &&
+                    partsDatabaseElement.TryGetInt32(
+                        out int parsedPartsDatabaseVersion)) {
+
+                    partsDatabaseVersion =
+                        parsedPartsDatabaseVersion;
+                }
+
+                return new IoModelMetadata(
+                    partCount,
+                    studioVersion,
+                    partsDatabaseVersion,
+                    null,
+                    PartCountValidation.Unknown);
             }
         }
         catch (JsonException) {
@@ -417,15 +436,15 @@ public class IoFileReader {
     /// Reads the part count from model.ldr.
     ///
     /// Studio stores model information in LDraw-compatible text files.
-    /// BrickView looks for the NumOfBricks meta command as a fallback
-    /// or validation source for the part count.
+    /// BrickView looks for the NumOfBricks meta command as a fallback or
+    /// validation source for the part count.
     /// </summary>
     /// <param name="archive">
     /// The open Studio ZIP archive.
     /// </param>
     /// <returns>
-    /// The part count when the NumOfBricks command can be found;
-    /// otherwise null.
+    /// The part count when the NumOfBricks command can be found; otherwise
+    /// null.
     /// </returns>
     private static int? ReadLDrawPartCount(
         ZipFile archive) {
@@ -442,6 +461,7 @@ public class IoFileReader {
                 fileName,
                 "model.ldr",
                 StringComparison.OrdinalIgnoreCase)) {
+
                 modelEntry =
                     entry;
 
@@ -462,6 +482,7 @@ public class IoFileReader {
                    stream,
                    Encoding.UTF8,
                    true)) {
+
             while (!reader.EndOfStream) {
                 string? line =
                     reader.ReadLine();
@@ -477,8 +498,8 @@ public class IoFileReader {
                 //
                 // 0 NumOfBricks <count>
                 //
-                // We only need this specific meta command and can ignore
-                // the remaining LDraw model content.
+                // Only this meta command is required here; the remaining
+                // LDraw model content can be ignored.
                 if (!trimmedLine.StartsWith(
                         "0 NumOfBricks ",
                         StringComparison.Ordinal)) {
@@ -486,9 +507,10 @@ public class IoFileReader {
                 }
 
                 string value =
-                    trimmedLine.Substring(
-                        "0 NumOfBricks ".Length)
-                    .Trim();
+                    trimmedLine
+                        .Substring(
+                            "0 NumOfBricks ".Length)
+                        .Trim();
 
                 if (int.TryParse(
                         value,
